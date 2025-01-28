@@ -2,7 +2,7 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = function(knex) {
+exports.up = function (knex) {
   return knex.schema
     // Create role and permission tables first as they are referenced by others
     .createTable('role', table => {
@@ -55,23 +55,33 @@ exports.up = function(knex) {
       table.increments('team_id').primary();
       table.string('team_name').notNullable();
       table.string('email');
+
       table.string('first_name').notNullable();
       table.string('middle_name');
       table.string('last_name').notNullable();
-      table.string('position').notNullable().defaultTo('Captain');
+      table.string('position').notNullable().defaultTo('captain');
       table.string('zone');
       table.string('gender');
       table.date('dob');
       table.string('t_shirt_size');
       table.string('track_pant_size');
-      table.uuid('uuid').defaultTo(knex.raw('(UUID())')); 
+      table.string('passport_picture')
+        .defaultTo('/assets/sfa_profile.png')
+        .comment('Passport size picture (jpeg, png), max size 5 MB');
+      table.string('age_proof')
+        .defaultTo('/assets/age.png')
+        .comment('Age identification proof (jpeg, png, PDF), max size 5 MB. Must include full DOB.');
+
+      table.uuid('uuid').defaultTo(knex.raw('(UUID())'));
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('updated_at').defaultTo(knex.fn.now());
 
+      
       // Add indexes
       table.index('team_name');
-    })
-    .createTable('user_registration', table => {
+    }).
+
+    createTable('user_registration', table => {
       table.increments('user_id').primary();
       table.string('first_name').notNullable();
       table.string('last_name').notNullable();
@@ -79,11 +89,14 @@ exports.up = function(knex) {
       table.integer('team_id').unsigned().notNullable();
       table.string('mobile_no', 15).notNullable().unique();
       table.string('otp', 6).notNullable();
+      table.specificType('team_status', "ENUM('pending', 'approve', 'reject')")
+        .defaultTo('pending')
+        .notNullable(); // Update this column to ENUM
       table.boolean('is_active').defaultTo(true);
-      table.uuid('uuid').defaultTo(knex.raw('(UUID())')); 
+      table.uuid('uuid').defaultTo(knex.raw('(UUID())'));
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('updated_at').defaultTo(knex.fn.now());
-      
+
       // Add named check constraint
       table.check('?? != ??', ['first_name', 'last_name'], 'check_different_names');
 
@@ -124,6 +137,13 @@ exports.up = function(knex) {
       // Add indexes for foreign keys
       table.index('user_id');
       table.index('role_id');
+    }).
+    createTable('admin', (table) => {
+      table.increments('admin_id').primary(); // Auto-incrementing primary key
+      table.string('mobile_no', 15).notNullable().unique(); // Admin's mobile number
+      table.string('otp', 6).notNullable(); // OTP for authentication
+      table.timestamp('created_at').defaultTo(knex.fn.now()); // Timestamp for creation
+      table.timestamp('updated_at').defaultTo(knex.fn.now()); // Timestamp for last update
     });
 };
 
@@ -131,7 +151,7 @@ exports.up = function(knex) {
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function(knex) {
+exports.down = function (knex) {
   return knex.schema
     // Drop tables in reverse order to handle foreign key constraints
     .dropTableIfExists('user_role')
@@ -139,5 +159,8 @@ exports.down = function(knex) {
     .dropTableIfExists('team_details')
     .dropTableIfExists('role_permission')
     .dropTableIfExists('permission')
-    .dropTableIfExists('role');
+    .dropTableIfExists('role')
+    .dropTableIfExists('admin');
 };
+
+//comment added 

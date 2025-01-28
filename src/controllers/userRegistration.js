@@ -98,10 +98,10 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-exports.getAllUsers = async (req, res) => {
+exports.getAllCaptain = async (req, res) => {
     try {
         const users = await knex('user_registration')
-            .select('user_id', 'first_name', 'last_name', 'team_name', 'mobile_no', 'is_active');
+            .select('user_id', 'first_name', 'last_name', 'team_name', 'is_active');
 
         res.json({
             success: true,
@@ -117,41 +117,44 @@ exports.getAllUsers = async (req, res) => {
 };
 exports.getByTeam = async (req, res) => {
     try {
-      const { teamName } = req.params;
-      console.log('Team Name:', teamName);
-  
-      // Validate if `teamName` exists
-      if (!teamName) {
-        return res.status(400).json({
-          success: false,
-          message: 'Team name is required',
+        const { teamName } = req.params;
+        console.log('Team Name:', teamName);
+
+        // Validate if `teamName` exists
+        if (!teamName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Team name is required',
+            });
+        }
+
+        // Fetch the team details from the database
+        const team = await knex('team_details')
+            .select('*')
+            .where({ team_name: teamName });
+
+        // Check if the team exists
+        if (team.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Team not found',
+            });
+        }
+
+        // Send a successful response with the team data
+        res.status(200).json({
+            success: true,
+            data: team,
         });
-      }
-  
-      // Fetch the team details from the database
-      const team = await knex('team_details')
-        .select('*')
-        .where({ team_name: teamName })
-  
-      if (!team) {
-        return res.status(404).json({
-          success: false,
-          message: 'Team not found',
-        });
-      }
-  
-      res.status(200).json({
-        success: true,
-        data: team,
-      });
     } catch (error) {
-      console.error('Error fetching team:', error);
-      res.status(500).json({
-        success: false,
-        message: 'An unexpected error occurred. Please try again later.',
-      });
+        console.error('Error fetching team:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred. Please try again later.',
+        });
     }
-  };
+};
+
   
   
 
@@ -215,50 +218,50 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-exports.verifyOTP = async (req, res) => {
-    try {
-        const { mobile_no, otp } = req.body;
+// exports.verifyOTP = async (req, res) => {
+//     try {
+//         const { mobile_no, otp } = req.body;
 
-        const user = await knex('user_registration')
-            .where({ mobile_no, otp })
-            .first();
-        const isMobileExists = await knex('user_registration')
-            .where({ mobile_no })
-            .first();
-        if (!isMobileExists) {
-            return res.status(400).json({
-                success: false,
-                message: 'Mobile number is not registered'
-            })
-        }
+//         const user = await knex('user_registration')
+//             .where({ mobile_no, otp })
+//             .first();
+//         const isMobileExists = await knex('user_registration')
+//             .where({ mobile_no })
+//             .first();
+//         if (!isMobileExists) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Mobile number is not registered'
+//             })
+//         }
 
-        if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid OTP'
-            });
-        }
+//         if (!user) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Invalid OTP'
+//             });
+//         }
 
-        // Update user status after OTP verification
-        await knex('user_registration')
-            .where('mobile_no', mobile_no)
-            .update({
-                is_active: true,
-                updated_at: knex.fn.now()
-            });
+//         // Update user status after OTP verification
+//         await knex('user_registration')
+//             .where('mobile_no', mobile_no)
+//             .update({
+//                 is_active: true,
+//                 updated_at: knex.fn.now()
+//             });
 
-        res.json({
-            success: true,
-            message: 'OTP verified successfully'
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error verifying OTP',
-            error: error.message
-        });
-    }
-};
+//         res.json({
+//             success: true,
+//             message: 'OTP verified successfully'
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error verifying OTP',
+//             error: error.message
+//         });
+//     }
+// };
 
 exports.addTeamMember = async (req, res) => {
     try {
@@ -295,7 +298,7 @@ exports.addTeamMember = async (req, res) => {
           message: 'Team not found.',
         });
       }
-  
+  //hello
       // Check for duplicate email in the same team
       const emailExists = await knex('team_details')
         .select('email')
@@ -318,6 +321,7 @@ exports.addTeamMember = async (req, res) => {
         gender,
         dob,
         email,
+        position:"team member",
         t_shirt_size,
         track_pant_size,
       });
@@ -364,3 +368,129 @@ exports.addTeamMember = async (req, res) => {
     }
   };
   
+  exports.updateTeamStatus = async (req, res) => {
+    try {
+        const { uuid, team_status } = req.body;
+
+        // Validate input
+        if (!uuid || !team_status) {
+            return res.status(400).json({
+                success: false,
+                message: 'UUID and team_status are required.',
+            });
+        }
+
+        // Validate team_status
+        const validStatuses = ['pending', 'approve', 'reject'];
+        if (!validStatuses.includes(team_status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid team_status. Allowed values are: ${validStatuses.join(', ')}.`,
+            });
+        }
+
+        // Check if the user exists
+        const user = await knex('user_registration')
+            .select('user_id', 'team_status')
+            .where('uuid', uuid)
+            .first();
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found.',
+            });
+        }
+
+        // Update the team_status
+        await knex('user_registration')
+            .where('uuid', uuid)
+            .update({ team_status });
+
+        // Return success response
+        res.status(200).json({
+            success: true,
+            message: 'Team status updated successfully.',
+            data: {
+                uuid,
+                previous_status: user.team_status,
+                new_status: team_status,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred. Please try again later.',
+        });
+    }
+};
+
+exports.verifyOTP = async (req, res) => {
+    try {
+        const { mobile_no, otp } = req.body;
+
+        // Check if the mobile number exists in the admin table first
+        const admin = await knex('admin')
+            .where({ mobile_no })
+            .first();
+
+        if (admin) {
+            // If the mobile number exists in the admin table, verify OTP for admin
+            if (admin.otp !== otp) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid OTP for admin'
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'OTP verified successfully for admin'
+            });
+        }
+
+        // If the mobile number doesn't exist in the admin table, check in user_registration
+        const user = await knex('user_registration')
+            .where({ mobile_no, otp })
+            .first();
+
+        const isMobileExists = await knex('user_registration')
+            .where({ mobile_no })
+            .first();
+
+        if (!isMobileExists) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mobile number is not registered'
+            });
+        }
+
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid OTP for user'
+            });
+        }
+
+        // Update user status after OTP verification
+        await knex('user_registration')
+            .where('mobile_no', mobile_no)
+            .update({
+                is_active: true,
+                updated_at: knex.fn.now()
+            });
+
+        res.json({
+            success: true,
+            message: 'OTP verified successfully for user'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error verifying OTP',
+            error: error.message
+        });
+    }
+};
+

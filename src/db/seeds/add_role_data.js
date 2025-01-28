@@ -28,5 +28,9 @@ exports.seed = async function(knex) {
       { role_permission_id: 3, role_id: 2, permission_id: 2 },
       { role_permission_id: 4, role_id: 1, permission_id: 3 }
     ]);
+    //Admin
+    await knex('admin').insert([
+      {admin_id: 1, mobile_no:"7747863314",otp:"774786"}
+    ])
   };
   

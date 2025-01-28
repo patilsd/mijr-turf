@@ -1,29 +1,43 @@
 const express = require('express');
 const knex = require('./db/knex');
+const path = require('path');
+const cors = require('cors');
 
 const userRegistrationRoutes = require('./routes/userRegistration');
-const allUsersRoutes = require('./routes/userRegistration');
+const getAllCaptain = require('./routes/userRegistration');
 const getByTeam = require('./routes/userRegistration');
 const verifyOTP = require('./routes/userRegistration')
 const addTeamMember = require('./routes/userRegistration');
 const deleteTeamMember = require('./routes/userRegistration');
 const getUniqueTeamNames=require('./routes/userRegistration');
+const updateTeamStatus=require('./routes/userRegistration');
 
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
+app.use(cors());
 // Middleware
+const corsOptions = {
+  origin: 'http://localhost:5173',  // Replace with your frontend's URL
+  methods: ['GET', 'POST'],     // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+};
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// for images
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // Routes
 app.use('/api', userRegistrationRoutes);
-app.use('/api', allUsersRoutes);
+app.use('/api', getAllCaptain);
 app.use('/api', getByTeam);
 app.use('/api',verifyOTP);
 app.use('/api', addTeamMember);
 app.use('/api', deleteTeamMember);
 app.use('/api',getUniqueTeamNames);
+app.use('/api',updateTeamStatus)
 
 
 
