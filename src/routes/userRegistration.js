@@ -12,6 +12,7 @@ router.post('/verifyOtp', userController.verifyOTP);
 router.post('/addmember/:teamName', userController.addTeamMember);
 router.get('/teams/unique', userController.getUniqueTeamNames)
 router.put('/teamStatus', userController.updateTeamStatus);
+router.get('/getAllTeams',userController.getAllTeams)
 
 
 module.exports = router;

@@ -43,7 +43,16 @@ exports.registerUser = async (req, res) => {
                 message: 'The mobile number is already registered. Please use a different number.',
             });
         }
-
+        const isTeamNameExists = await knex('user_registration')
+            .select('team_name')
+            .where('team_name', team_name)
+            .first();
+            if (isTeamNameExists) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'The Team name is already registered. Please use a different team name.',
+                });
+            }
         // Step 3: Register the user in `user_registration` with the associated team_id
         const [user_id] = await knex('user_registration').insert({
             first_name,
@@ -68,7 +77,7 @@ exports.registerUser = async (req, res) => {
         }
 
         // Success response
-        res.status(201).json({
+       return res.status(201).json({
             success: true,
             message: 'User registered successfully',
         });
@@ -91,7 +100,7 @@ exports.registerUser = async (req, res) => {
 
         // General error fallback
         console.error(error); // Log for debugging purposes
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'An unexpected error occurred. Please try again later.',
         });
@@ -154,10 +163,6 @@ exports.getByTeam = async (req, res) => {
         });
     }
 };
-
-  
-  
-
 
 exports.updateUser = async (req, res) => {
     try {
@@ -444,7 +449,7 @@ exports.verifyOTP = async (req, res) => {
                 });
             }
 
-            return res.json({
+            return res.status(202).json({
                 success: true,
                 message: 'OTP verified successfully for admin'
             });
@@ -489,6 +494,71 @@ exports.verifyOTP = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error verifying OTP',
+            error: error.message
+        });
+    }
+};
+
+exports.getAllTeams = async (req, res) => {
+    try {
+        // Fetch team details from user_registration
+        const teams = await knex('user_registration')
+            .select(
+                'user_registration.team_id',
+                knex.raw('TRIM(LOWER(user_registration.team_name)) AS normalized_team_name'),
+                'user_registration.team_name',
+                'user_registration.team_status'
+            );
+
+        if (!teams.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'No teams found.',
+            });
+        }
+
+        // Get unique team names to find members
+        const uniqueTeamNames = [...new Set(teams.map(team => team.team_name))];
+
+        // Fetch members based on team_name from team_details
+        const members = await knex('team_details')
+            .whereIn('team_name', uniqueTeamNames)
+            .select('team_name', 'first_name', 'last_name', 'position');
+
+        // Organizing data into required format with unique teams
+        const teamMap = new Map();
+
+        teams.forEach(team => {
+            const normalizedName = team.normalized_team_name;
+
+            if (!teamMap.has(normalizedName)) {
+                teamMap.set(normalizedName, {
+                    team_id: team.team_id,
+                    team_name: team.team_name, // Use original name
+                    team_status: team.team_status,
+                    total_members: 0,
+                    members: []
+                });
+            }
+
+            // Add matching members to the team
+            const currentTeam = teamMap.get(normalizedName);
+            const teamMembers = members.filter(member => member.team_name === team.team_name);
+            currentTeam.members.push(...teamMembers);
+            currentTeam.total_members = currentTeam.members.length;
+        });
+
+        // Respond with structured team data
+        res.status(200).json({
+            success: true,
+            teams: Array.from(teamMap.values()),
+        });
+
+    } catch (error) {
+        console.error('Error fetching teams:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred. Please try again later.',
             error: error.message
         });
     }
