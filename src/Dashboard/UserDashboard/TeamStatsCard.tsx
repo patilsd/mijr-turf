@@ -10,7 +10,7 @@ interface TeamStatsCardProps {
 
 export const TeamStatsCard: React.FC<TeamStatsCardProps> = ({ icon, title, value, status }) => {
   return (
-    <div className="bg-white overflow-hidden shadow rounded-lg">
+    <div className="bg-white overflow-hidden shadow rounded-lg ">
       <div className="p-5">
         <div className="flex items-center">
           <div className="flex-shrink-0">

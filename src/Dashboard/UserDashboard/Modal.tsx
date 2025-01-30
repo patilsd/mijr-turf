@@ -28,7 +28,7 @@ export const Modal: React.FC<ModalProps> = ({ title, isOpen, onClose, children }
         {/* Modal Body */}
         <div className="p-4">{children}</div>
 
-        {/* Modal Footer (optional, if needed) */}
+
       </div>
     </div>
   );
