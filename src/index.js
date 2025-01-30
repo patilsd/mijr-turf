@@ -19,7 +19,7 @@ const port = process.env.PORT;
 // Middleware
 const corsOptions = {
   origin: 'http://localhost:5173',  // Replace with your frontend's URL
-  methods: ['GET', 'POST'],     // Allowed HTTP methods
+  methods: ['GET', 'POST','PUT','UPDATE','DELETE'],     // Allowed HTTP methods
   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
 };
 app.use(cors(corsOptions));

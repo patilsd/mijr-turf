@@ -55,7 +55,8 @@ exports.up = function (knex) {
       table.increments('team_id').primary();
       table.string('team_name').notNullable();
       table.string('email');
-
+      table.integer('mobile');
+      table.boolean('isLead');
       table.string('first_name').notNullable();
       table.string('middle_name');
       table.string('last_name').notNullable();
