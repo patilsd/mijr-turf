@@ -2,7 +2,7 @@ const knex = require('../db/knex');
 
 exports.registerUser = async (req, res) => {
     try {
-        const { first_name, last_name, team_name, mobile_no, otp } = req.body;
+        const { first_name, last_name, team_name, mobile_no, otp ,team_zone} = req.body;
 
         // Validate required fields
         if (!first_name || !last_name || !team_name || !mobile_no) {
@@ -61,6 +61,7 @@ exports.registerUser = async (req, res) => {
             team_id,
             mobile_no,
             otp,
+            team_zone
         });
 
         // Step 4: Assign the "player" role to the user in `user_role`
@@ -139,7 +140,7 @@ exports.getByTeam = async (req, res) => {
 
         // Fetch the team status from the `user_registration` table based on team_name
         const teamStatus = await knex('user_registration')
-            .select('team_status')
+            .select('team_status','team_zone')
             .where({ team_name: teamName })
             .first();
 
@@ -160,7 +161,6 @@ exports.getByTeam = async (req, res) => {
                 'middle_name', 
                 'last_name', 
                 'position', 
-                'zone', 
                 'gender', 
                 'dob', 
                 't_shirt_size', 
@@ -184,6 +184,7 @@ exports.getByTeam = async (req, res) => {
         res.status(200).json({
             success: true,
             team_status: teamStatus.team_status,  // team status from user_registration table
+            team_zone:teamStatus.team_zone,
             data: teamMembers
         });
 
@@ -607,3 +608,94 @@ exports.getAllTeams = async (req, res) => {
     }
 };
 
+exports.editTeamMember = async (req, res) => {
+    try {
+      const { team_id } = req.params; // Get team member ID (e.g., team_id or uuid) from params
+      const {
+        first_name,
+        last_name,
+        middle_name,
+        mobile_no,
+        position,
+        gender,
+        dob,
+        email,
+        t_shirt_size,
+        track_pant_size,
+        passport_picture,
+        age_proof
+      } = req.body; // Get updated team member details from the request body
+  
+      // Validate required fields (you can adjust this as needed)
+    //   if (!first_name || !last_name || !email) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: 'First name, last name, and email are required.',
+    //     });
+    //   }
+  
+      // Check if the member exists in the team
+      const existingMember = await knex('team_details')
+        .select('*')
+        .where('team_id', team_id) // or use `uuid` if that's how you're identifying members
+        .first();
+  
+      if (!existingMember) {
+        return res.status(404).json({
+          success: false,
+          message: 'Team member not found.',
+        });
+      }
+  
+    //   Optional: Check for duplicate email in the team (you can modify this if needed)
+    //   const emailExists = await knex('team_details')
+    //     .select('email')
+    //     .where({ team_name: existingMember.team_name, email })
+    //     .first();
+  
+    //   if (emailExists && emailExists.team_id !== team_id) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       message: 'A member with this email already exists in the team.',
+    //     });
+    //   }
+  
+      // Update the team member information
+      await knex('team_details')
+        .where('team_id', team_id) // or use `uuid`
+        .update({
+          first_name,
+          middle_name,
+          last_name,
+          mobile_no,
+          position,
+          gender,
+          dob,
+          email,
+          t_shirt_size,
+          track_pant_size,
+          passport_picture,
+          age_proof,
+          updated_at: knex.fn.now(), // Optional: update the timestamp
+        });
+  
+      // Fetch the updated member data
+      const updatedMember = await knex('team_details')
+        .select('*')
+        .where('team_id', team_id) // or use `uuid`
+        .first();
+  
+      res.status(200).json({
+        success: true,
+        message: 'Team member updated successfully.',
+        // updatedMember, // Include the updated member data in the response
+      });
+    } catch (error) {
+      console.error('Error updating team member:', error);
+      res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred. Please try again later.',
+      });
+    }
+  };
+  

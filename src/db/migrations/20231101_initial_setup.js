@@ -55,13 +55,13 @@ exports.up = function (knex) {
       table.increments('team_id').primary();
       table.string('team_name').notNullable();
       table.string('email');
-      table.integer('mobile');
+      table.integer('mobile_no');
       table.boolean('isLead');
       table.string('first_name').notNullable();
       table.string('middle_name');
       table.string('last_name').notNullable();
       table.string('position').notNullable().defaultTo('captain');
-      table.string('zone');
+   
       table.string('gender');
       table.date('dob');
       table.string('t_shirt_size');
@@ -87,11 +87,12 @@ exports.up = function (knex) {
       table.string('first_name').notNullable();
       table.string('last_name').notNullable();
       table.string('team_name').notNullable().unique();
+      table.string('team_zone').notNullable();
       table.integer('team_id').unsigned().notNullable();
       table.string('mobile_no', 15).notNullable().unique();
       table.string('otp', 6).notNullable();
-      table.specificType('team_status', "ENUM('pending', 'approve', 'reject')")
-        .defaultTo('pending')
+      table.specificType('team_status', "ENUM('Pending', 'Approve', 'Reject')")
+        .defaultTo('Pending')
         .notNullable(); // Update this column to ENUM
       table.boolean('is_active').defaultTo(true);
       table.uuid('uuid').defaultTo(knex.raw('(UUID())'));
