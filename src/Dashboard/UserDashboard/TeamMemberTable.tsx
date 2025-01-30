@@ -69,6 +69,7 @@ interface TeamTableProps {
 
 export const TeamMemberTable: React.FC<TeamTableProps> = ({ members, onPromote, onDelete, onEdit }) => {
     // Ensure that the team lead is always at the top
+    console.log(members)
     const sortedMembers = [...members].sort((a, b) => (a.isLead ? -1 : 1)); 
 
     return (
@@ -93,15 +94,15 @@ export const TeamMemberTable: React.FC<TeamTableProps> = ({ members, onPromote, 
                         <tr key={member.id}>
                             <td className="py-4 px-4 text-sm font-medium">{index + 1}</td> {/* Serial Number */}
                             <td className="text-sm text-gray-900 pl-2">
-                                {member.firstName} {member.middleName} {member.lastName}
+                                {member.first_name} {member.middle_ame} {member.last_name}
                             </td>
                             <td className="text-sm text-gray-900 pl-2">{member.position}</td>
                             <td className="text-sm text-gray-900 pl-2">{member.gender}</td>
                             <td className="text-sm text-gray-900 pl-2">{member.dob}</td>
                             <td className="text-sm text-gray-900 pl-2">{member.mobile}</td>
                             <td className="text-sm text-gray-900 pl-2">{member.email}</td>
-                            <td className="text-sm text-gray-900 pl-2">{member.tShirtSize}</td>
-                            <td className="text-sm text-gray-900 pl-2">{member.trackpantSize}</td>
+                            <td className="text-sm text-gray-900 pl-2">{member.t_shirt_size}</td>
+                            <td className="text-sm text-gray-900 pl-2">{member.track_pant_size}</td>
                             <td className="py-4 text-left text-sm pl-2">
                                 <button onClick={() => onPromote(member.id)} className="text-indigo-600 hover:text-indigo-900 mb-2">
                                     {member.isLead ? "Demote" : "Promote"}

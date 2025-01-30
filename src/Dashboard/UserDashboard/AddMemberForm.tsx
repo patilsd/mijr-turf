@@ -241,7 +241,7 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
   onCancel,
 }) => {
   const [formData, setFormData] = useState<TeamMember>({
-    id: "",
+   
     firstName: "",
     middleName: "",
     lastName: "",
@@ -252,7 +252,7 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
     email: "",
     tShirtSize: "",
     trackpantSize: "",
-    isLead: false,
+  
   });
 
   // Pre-fill form data when editing
@@ -272,6 +272,7 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddMember(formData); // Pass updated data to parent component
+    onCancel();
   };
 
   return (

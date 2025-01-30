@@ -5,6 +5,7 @@ import { Header } from './Header';
 import { LoginForm } from './LoginForm';
 import { SignupForm } from './SignupForm';
 import { useNavigate } from 'react-router-dom';
+import { ContentPasteOffSharp } from '@mui/icons-material';
 
 const backgroundImages = [
   'https://wallpapers.com/images/hd/cricket-ground-background-a2rr2mi4xx5wedcl.jpg',
@@ -74,29 +75,97 @@ function RegistrationPage() {
     setOtpSent(true);
     alert('OTP sent to your Mobile Number');
   };
+const handleSubmit = (formType: 'login' | 'signup') => async (e: React.FormEvent) => {
+  e.preventDefault();
+  const newErrors: Record<string, string> = {};
+  const formData = formType === 'login' ? loginFormData : signupFormData;
 
-  const handleSubmit = (formType: 'login' | 'signup') => (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: Record<string, string> = {};
-    const formData = formType === 'login' ? loginFormData : signupFormData;
+  // Validation for required fields
+  if (formType === 'signup') {
+    if (!signupFormData.firstName) newErrors.firstName = 'First name is required';
+    if (!signupFormData.lastName) newErrors.lastName = 'Last name is required';
+    if (!signupFormData.teamName) newErrors.teamName = 'Team name is required';
+  }
+  if (!formData.mobile) newErrors.mobile = 'Mobile number is required';
+  if (!otpSent || !formData.otp) newErrors.otp = 'OTP is required';
 
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
+
+  try {
     if (formType === 'signup') {
-      if (!signupFormData.firstName) newErrors.firstName = 'First name is required';
-      if (!signupFormData.lastName) newErrors.lastName = 'Last name is required';
-      if (!signupFormData.teamName) newErrors.teamName = 'Team name is required';
-    }
-    if (!formData.mobile) newErrors.mobile = 'Mobile number is required';
-    if (otpSent && !formData.otp) newErrors.otp = 'OTP is required';
+      const response = await fetch('http://localhost:8080/api/user/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: signupFormData.firstName,
+          last_name: signupFormData.lastName,
+          team_name: signupFormData.teamName,
+          mobile_no: signupFormData.mobile,
+          otp: signupFormData.otp,
+        }),
+      });
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Check for specific error when mobile number is already registered
+        if (data.message === 'Mobile number already registered') {
+          alert('This mobile number is already registered!');
+        } else {
+          alert(data.message || 'Failed to register');
+        }
+        return;  // Prevent the redirect if registration failed
+      }
+
+      // Show confirmation dialog and redirect if registration is successful
+      const isConfirmed = window.confirm('Registration successful! Click OK to proceed to the dashboard.');
+
+      if (isConfirmed) {
+        navigate(`/dashboard?teamName=${signupFormData.teamName}`);
+      }
+
+    } else {
+      // Login API Call
+      const response = await fetch('http://localhost:8080/api/verifyOTP', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mobile_no: loginFormData.mobile,
+          otp: loginFormData.otp,
+        }),
+      });
+      // console.log("new one",response)
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+      if (response.status === 202) {
+        alert('Login Successful! Redirecting to the Admin page');
+        navigate('/admin');
+        return;
+      }
+      // console.log("login response",data)
+      if (data.team_name){
+      alert('Login successful! Redirecting to dashboard...');
+      navigate(`/dashboard?teamName=${data.team_name}`);
       return;
     }
+    }
+  } catch (error) {
+    alert(error.message);
+  }
+};
 
-    console.log('Form submitted:', formData);
-    navigate('/dashboard');
-  };
-
+  
+  
   const handlePreviousImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + backgroundImages.length) % backgroundImages.length);
   };
