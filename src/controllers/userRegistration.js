@@ -368,8 +368,8 @@ exports.addTeamMember = async (req, res) => {
         position,
         t_shirt_size,
         track_pant_size,
-        passport_picture,
-        age_proof
+        passport_picture: passport_picture && passport_picture !== '{}' ? passport_picture : '/assets/sfa_profile.png', 
+        age_proof: age_proof && age_proof !== '{}' ? age_proof : '/assets/age.png',
       });
   
       // Fetch the newly added member
@@ -707,6 +707,7 @@ exports.editTeamMember = async (req, res) => {
           message: 'Team member not found.',
         });
       }
+      
   
     //   Optional: Check for duplicate email in the team (you can modify this if needed)
     //   const emailExists = await knex('team_details')
@@ -759,4 +760,102 @@ exports.editTeamMember = async (req, res) => {
       });
     }
   };
+  
+
+// exports.editTeamMember = async (req, res) => {
+//     try {
+//       const { team_id } = req.params; // Get team member ID from params
+//       const {
+//         first_name,
+//         last_name,
+//         middle_name,
+//         mobile_no,
+//         position,
+//         gender,
+//         dob,
+//         email,
+//         t_shirt_size,
+//         track_pant_size,
+//         passport_picture,
+//         age_proof
+//       } = req.body; // Get updated team member details
+  
+//       // Check if the member exists
+//       const existingMember = await knex('team_details')
+//         .select('*')
+//         .where('team_id', team_id)
+//         .first();
+  
+//       if (!existingMember) {
+//         return res.status(404).json({
+//           success: false,
+//           message: 'Team member not found.',
+//         });
+//       }
+  
+//       // Check if a captain already exists in this team
+//       const existingCaptain = await knex('team_details')
+//         .select('team_id') // Get the team member's ID who is the captain
+//         .where({ team_name: existingMember.team_name, position: 'Captain' })
+//         .first();
+  
+//       // If a captain exists and the new position is "Captain"
+//       if (existingCaptain && position === 'Captain') {
+//         if (existingCaptain.team_id !== team_id) {
+//           // Step 1: Demote the existing captain to "Member" automatically
+//           await knex('team_details')
+//             .where('team_id', existingCaptain.team_id)
+//             .update({ position: 'Member' });
+  
+//           console.log(`Demoted previous captain (ID: ${existingCaptain.team_id}) to Member.`);
+//         }
+//       }
+  
+//       // Ensure that at least one captain exists in the team
+//       if (!existingCaptain && position !== 'Captain') {
+//         return res.status(400).json({
+//           success: false,
+//           message: 'Each team must have at least one captain. Please assign a captain.',
+//         });
+//       }
+  
+//       // Update the team member information
+//       await knex('team_details')
+//         .where('team_id', team_id)
+//         .update({
+//           first_name,
+//           middle_name,
+//           last_name,
+//           mobile_no,
+//           position,
+//           gender,
+//           dob,
+//           email,
+//           t_shirt_size,
+//           track_pant_size,
+//           passport_picture: passport_picture && passport_picture !== '{}' ? passport_picture : '/assets/sfa_profile.png',
+//           age_proof: age_proof && age_proof !== '{}' ? age_proof : '/assets/age.png',
+//           updated_at: knex.fn.now(),
+//         });
+  
+//       // Fetch the updated member data
+//       const updatedMember = await knex('team_details')
+//         .select('*')
+//         .where('team_id', team_id)
+//         .first();
+  
+//       res.status(200).json({
+//         success: true,
+//         message: 'Team member updated successfully.',
+//         updatedMember, // Returning the updated member details
+//       });
+  
+//     } catch (error) {
+//       console.error('Error updating team member:', error);
+//       res.status(500).json({
+//         success: false,
+//         message: 'An unexpected error occurred. Please try again later.',
+//       });
+//     }
+//   };
   
