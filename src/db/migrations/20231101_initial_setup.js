@@ -66,12 +66,8 @@ exports.up = function (knex) {
       table.date('dob');
       table.string('t_shirt_size');
       table.string('track_pant_size');
-      table.string('passport_picture')
-        .defaultTo('/assets/sfa_profile.png')
-        .comment('Passport size picture (jpeg, png), max size 5 MB');
-      table.string('age_proof')
-        .defaultTo('/assets/age.png')
-        .comment('Age identification proof (jpeg, png, PDF), max size 5 MB. Must include full DOB.');
+      table.string('passport_picture').nullable();
+      table.string('age_proof').nullable();
 
       table.uuid('uuid').defaultTo(knex.raw('(UUID())'));
       table.timestamp('created_at').defaultTo(knex.fn.now());

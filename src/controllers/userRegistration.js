@@ -160,6 +160,7 @@ exports.getByTeam = async (req, res) => {
                 'first_name', 
                 'middle_name', 
                 'last_name', 
+                'mobile_no',
                 'position', 
                 'gender', 
                 'dob', 
@@ -309,12 +310,15 @@ exports.addTeamMember = async (req, res) => {
         first_name,
         last_name,
         middle_name,
+        mobile_no,
         position,
         gender,
         dob,
         email,
         t_shirt_size,
         track_pant_size,
+        passport_picture,
+        age_proof
       } = req.body; // Get team member details from request body
   
       // Validate required fields
@@ -357,12 +361,15 @@ exports.addTeamMember = async (req, res) => {
         first_name,
         last_name,
         middle_name,
+        mobile_no,
         gender,
         dob,
         email,
         position,
         t_shirt_size,
         track_pant_size,
+        passport_picture,
+        age_proof
       });
   
       // Fetch the newly added member
@@ -414,52 +421,107 @@ exports.addTeamMember = async (req, res) => {
     }
   };
   
-  exports.updateTeamStatus = async (req, res) => {
-    try {
-        const { team_id, team_status } = req.body;
+//   exports.updateTeamStatus = async (req, res) => {
+//     try {
+//         const { team_id, team_status } = req.body;
 
+//         // Validate input
+//         if (!team_id || !team_status) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'team id and team_status are required.',
+//             });
+//         }
+
+//         // Validate team_status
+//         const validStatuses = ['pending', 'approve', 'reject'];
+//         if (!validStatuses.includes(team_status)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: `Invalid team_status. Allowed values are: ${validStatuses.join(', ')}.`,
+//             });
+//         }
+
+//         // Check if the user exists
+//         const user = await knex('user_registration')
+//             .select('user_id', 'team_status')
+//             .where('team_id', team_id)
+//             .first();
+
+//         if (!user) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: 'User not found.',
+//             });
+//         }
+
+//         // Update the team_status
+//         await knex('user_registration')
+//             .where('team_id', team_id)
+//             .update({ team_status });
+
+//         // Return success response
+//         res.status(200).json({
+//             success: true,
+//             message: 'Team status updated successfully.',
+//             data: {
+//                 team_id,
+//                 previous_status: user.team_status,
+//                 new_status: team_status,
+//             },
+//         });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'An unexpected error occurred. Please try again later.',
+//         });
+//     }
+// };
+exports.updateTeamStatus = async (req, res) => {
+    try {
+        const { team_ids, team_status } = req.body;
+ 
         // Validate input
-        if (!team_id || !team_status) {
+        if (!team_ids || !team_status) {
             return res.status(400).json({
                 success: false,
-                message: 'team id and team_status are required.',
+                message: 'team_ids and team_status are required.',
             });
         }
-
+ 
         // Validate team_status
-        const validStatuses = ['pending', 'approve', 'reject'];
+        const validStatuses = ['Pending', 'Approve', 'Reject'];
         if (!validStatuses.includes(team_status)) {
             return res.status(400).json({
                 success: false,
                 message: `Invalid team_status. Allowed values are: ${validStatuses.join(', ')}.`,
             });
         }
-
-        // Check if the user exists
-        const user = await knex('user_registration')
-            .select('user_id', 'team_status')
-            .where('team_id', team_id)
-            .first();
-
-        if (!user) {
+ 
+        // Check if all team_ids exist
+        const users = await knex('user_registration')
+            .select('team_id', 'team_status')
+            .whereIn('team_id', team_ids);
+ 
+        if (users.length !== team_ids.length) {
             return res.status(404).json({
                 success: false,
-                message: 'User not found.',
+                message: 'Some team IDs not found.',
             });
         }
-
-        // Update the team_status
+ 
+        // Update the team_status for each team
         await knex('user_registration')
-            .where('team_id', team_id)
+            .whereIn('team_id', team_ids)
             .update({ team_status });
-
+ 
         // Return success response
         res.status(200).json({
             success: true,
-            message: 'Team status updated successfully.',
+            message: 'Team status updated successfully for selected teams.',
             data: {
-                team_id,
-                previous_status: user.team_status,
+                team_ids,
                 new_status: team_status,
             },
         });
@@ -471,7 +533,6 @@ exports.addTeamMember = async (req, res) => {
         });
     }
 };
-
 exports.verifyOTP = async (req, res) => {
     try {
         const { mobile_no, otp } = req.body;
@@ -553,28 +614,28 @@ exports.getAllTeams = async (req, res) => {
                 'user_registration.team_name',
                 'user_registration.team_status'
             );
-
+ 
         if (!teams.length) {
             return res.status(404).json({
                 success: false,
                 message: 'No teams found.',
             });
         }
-
+ 
         // Get unique team names to find members
         const uniqueTeamNames = [...new Set(teams.map(team => team.team_name))];
-
+ 
         // Fetch members based on team_name from team_details
         const members = await knex('team_details')
             .whereIn('team_name', uniqueTeamNames)
             .select('team_name', 'first_name', 'last_name', 'position');
-
+ 
         // Organizing data into required format with unique teams
         const teamMap = new Map();
-
+ 
         teams.forEach(team => {
             const normalizedName = team.normalized_team_name;
-
+ 
             if (!teamMap.has(normalizedName)) {
                 teamMap.set(normalizedName, {
                     team_id: team.team_id,
@@ -584,20 +645,20 @@ exports.getAllTeams = async (req, res) => {
                     members: []
                 });
             }
-
+ 
             // Add matching members to the team
             const currentTeam = teamMap.get(normalizedName);
             const teamMembers = members.filter(member => member.team_name === team.team_name);
             currentTeam.members.push(...teamMembers);
             currentTeam.total_members = currentTeam.members.length;
         });
-
+ 
         // Respond with structured team data
         res.status(200).json({
             success: true,
             teams: Array.from(teamMap.values()),
         });
-
+ 
     } catch (error) {
         console.error('Error fetching teams:', error);
         res.status(500).json({
@@ -607,7 +668,7 @@ exports.getAllTeams = async (req, res) => {
         });
     }
 };
-
+ 
 exports.editTeamMember = async (req, res) => {
     try {
       const { team_id } = req.params; // Get team member ID (e.g., team_id or uuid) from params
@@ -674,8 +735,8 @@ exports.editTeamMember = async (req, res) => {
           email,
           t_shirt_size,
           track_pant_size,
-          passport_picture,
-          age_proof,
+          passport_picture: passport_picture && passport_picture !== '{}' ? passport_picture : '/assets/sfa_profile.png', 
+          age_proof: age_proof && age_proof !== '{}' ? age_proof : '/assets/age.png',
           updated_at: knex.fn.now(), // Optional: update the timestamp
         });
   
