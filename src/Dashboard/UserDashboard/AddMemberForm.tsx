@@ -13,19 +13,18 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
   onCancel,
 }) => {
   const [formData, setFormData] = useState<TeamMember>({
-
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    position: "",
-    gender: "",
-    dob: "",
-    mobile: "",
-    email: "",
-    tShirtSize: "",
-    trackpantSize: "",
-    passportPhoto:"",
-    ageProof:""
+    firstName: member?.first_name || '',
+    middleName: member?.middle_name || '',
+    lastName: member?.last_name || '',
+    position: member?.position || '',
+    gender: member?.gender || '',
+    dob: member?.dob || '',
+    email: member?.email || '',
+    mobile: member?.mobile_no || '',
+    tShirtSize: member?.t_shirt_size || '',
+    trackpantSize: member?.track_pant_size || '',
+    passportPhoto: member?.passport_picture || '',
+    ageProof: member?.age_proof || '',
 
   });
 
@@ -177,7 +176,7 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
             value={formData.mobile}
             onChange={handleChange}
             maxLength={9}
-            pattern="[0-9]{9}" // Ensure only 10-digit numbers
+            pattern="[0-9]{}" // Ensure only 10-digit numbers
             required
             placeholder="1234567890"
             className="mt-1 p-2 block w-full text-sm border border-gray-300 rounded-md shadow-sm"

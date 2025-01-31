@@ -13,9 +13,9 @@ export const Modal: React.FC<ModalProps> = ({ title, isOpen, onClose, children }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-lg max-w-lg w-full">
+      <div className="bg-white rounded-lg shadow-lg max-w-lg  w-full max-h-[550px] overflow-y-auto">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center justify-between px-4 py-1 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}

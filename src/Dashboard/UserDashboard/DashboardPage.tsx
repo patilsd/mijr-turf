@@ -13,7 +13,7 @@ import { useLocation } from 'react-router-dom'; // Import useLocation
 export const DashboardPage: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [teamStatus, setTeamStatus] = useState("");
-  const [teamZone,setTeamZone]=useState("");
+  const [teamZone, setTeamZone] = useState("");
   const [team, setTeam] = useState("");
   const [showAddMember, setShowAddMember] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,7 +22,7 @@ export const DashboardPage: React.FC = () => {
 
   const location = useLocation(); // Get current URL location
   const teamName = new URLSearchParams(location.search).get("teamName"); // Extract teamName from query parameters
-  console.log("URL TEAM",teamName);
+  console.log("URL TEAM", teamName);
   // ✅ Fetch Team Members by Team Name
   useEffect(() => {
     const fetchTeamData = async () => {
@@ -54,8 +54,8 @@ export const DashboardPage: React.FC = () => {
       member.last_name &&
       member.mobile_no &&
       member.email
-      // member.passportPhoto &&
-      // member.ageProof
+    // member.passportPhoto &&
+    // member.ageProof
   );
   console.log("isCaptainFilled", isCaptainFilled);
   // console.log("captain data", teamMembers.find(member => member.position === "Captain"))
@@ -75,8 +75,8 @@ export const DashboardPage: React.FC = () => {
         mobile_no: memberData.mobile, // matches backend column name (mobile_no in backend)
         t_shirt_size: memberData.tShirtSize, // matches backend column name
         track_pant_size: memberData.trackpantSize, // matches backend column name
-        passport_picture:memberData.passportPhoto,
-        age_proof:memberData.ageProof
+        passport_picture: memberData.passportPhoto,
+        age_proof: memberData.ageProof
       });
       console.log(response);
       if (response.data.success) {
@@ -122,23 +122,30 @@ export const DashboardPage: React.FC = () => {
 
   // ✅ Edit Member Modal
 
+  // const handleEditMember = (id: string) => {
+  //   console.log("Edit id", id);
+  //   const memberToEdit = teamMembers.find((member) => member.team_id === id);
+  //   if (memberToEdit) {
+  //     setCurrentEditMember(memberToEdit);
+  //     setIsEditModalOpen(true);
+  //   }
+  // };
   const handleEditMember = (id: string) => {
     console.log("Edit id", id);
     const memberToEdit = teamMembers.find((member) => member.team_id === id);
     if (memberToEdit) {
-      setCurrentEditMember(memberToEdit);
-      setIsEditModalOpen(true);
+      setCurrentEditMember(memberToEdit);  // Set member to edit
+      setIsEditModalOpen(true);  // Open the modal for editing
     }
   };
-  
-  
+
 
   const handleUpdateMember = async (updatedMember: TeamMember) => {
     if (!currentEditMember) {
       toast.error("No member selected for update");
       return;
     }
-  
+
     const updatedMemberData = {
       first_name: updatedMember.firstName,
       middle_name: updatedMember.middleName,
@@ -153,13 +160,13 @@ export const DashboardPage: React.FC = () => {
       passport_picture: updatedMember.passportPhoto,
       age_proof: updatedMember.ageProof,
     };
-  
+
     try {
       const response = await axios.put(
         `http://localhost:8080/api/editmember/${currentEditMember.team_id}`,
         updatedMemberData
       );
-    console.log("response of updated api",response);
+      console.log("response of updated api", response);
       if (response.data.success) {
         setTeamMembers((prevMembers) =>
           prevMembers.map((member) =>
@@ -168,7 +175,7 @@ export const DashboardPage: React.FC = () => {
               : member
           )
         );
-  
+
         toast.success("Team member updated successfully");
         setIsEditModalOpen(false);
       } else {
@@ -179,7 +186,7 @@ export const DashboardPage: React.FC = () => {
       toast.error("An error occurred while updating team member");
     }
   };
-  
+
 
   // ✅ Search Filter
   const filteredMembers = teamMembers.filter((member) =>
@@ -291,11 +298,21 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Edit Member Modal */}
-          <Modal title="Edit Team Member" isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
+          {/* <Modal title="Edit Team Member" isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
             {currentEditMember && (
               <AddMemberForm member={currentEditMember} onAddMember={handleUpdateMember} onCancel={() => setIsEditModalOpen(false)} />
             )}
+          </Modal> */}
+          <Modal title="Edit Team Member" isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)}>
+            {currentEditMember && (
+              <AddMemberForm
+                member={currentEditMember}  // Pass current member data for editing
+                onAddMember={handleUpdateMember}  // Pass function to handle the updated data
+                onCancel={() => setIsEditModalOpen(false)}  // Close modal on cancel
+              />
+            )}
           </Modal>
+
         </div>
       </div>
     </div>
