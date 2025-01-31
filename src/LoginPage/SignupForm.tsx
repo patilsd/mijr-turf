@@ -3,6 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Phone, KeyRound } from 'lucide-react';
 import { InputField } from './InputField';
 import { useNavigate } from 'react-router-dom';
+const zones = [
+  'Bandra', 'Ghatkopar', 'Vashi', 'Borivali', 'Thane', 'Marine Lines', 'Wadala', 'Juhu'
+];
 
 interface SignupFormProps {
   formData: { firstName: string; lastName: string; mobile: string; otp: string; teamName: string };
@@ -60,9 +63,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({
 
     // Perform the normal submit logic (e.g., onSubmit)
     onSubmit(e);
-    console.log("signup",formData.teamName)
+    // console.log("signup", formData.teamName)
     // Navigate to the next page with the teamName in the URL
     // navigate(`/dashboard?teamName=${formData.teamName}`);
+    
   };
 
   return (
@@ -83,6 +87,26 @@ export const SignupForm: React.FC<SignupFormProps> = ({
           onChange={onInputChange}
           error={errors.lastName}
         />
+      </div>
+      <div className='flex justify-between'>
+        {/* Team Name Field */}
+        <InputField
+          label="Team Name"
+          name="teamName"
+          value={formData.teamName}
+          onChange={onInputChange}
+          error={errors.teamName}
+        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Zone </label>
+          <select name="zone" value={formData.zone} onChange={onInputChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+            <option value="">Select Zone</option>
+            {zones.map((zone) => (
+              <option key={zone} value={zone}>{zone}</option>
+            ))}
+          </select>
+
+        </div>
       </div>
 
       {/* Mobile Number Field */}
@@ -106,11 +130,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({
             type="button"
             onClick={handleSendOTP}
             disabled={!formData.mobile || formData.mobile.length < 10}
-            className={`inline-flex items-center mt-6 px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white ${
-              formData.mobile.length === 10
-                ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-                : 'bg-gray-400 cursor-not-allowed'
-            }`}
+            className={`inline-flex items-center mt-6 px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white ${formData.mobile.length === 10
+              ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+              : 'bg-gray-400 cursor-not-allowed'
+              }`}
           >
             Send OTP
           </button>
@@ -147,16 +170,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({
           </div>
         </div>
       )}
-
-      {/* Team Name Field */}
-      <InputField
-        label="Team Name"
-        name="teamName"
-        value={formData.teamName}
-        onChange={onInputChange}
-        error={errors.teamName}
-      />
-
+      
       {/* Submit Button */}
       <button
         type="submit"

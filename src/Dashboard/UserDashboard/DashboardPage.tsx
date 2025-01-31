@@ -13,6 +13,7 @@ import { useLocation } from 'react-router-dom'; // Import useLocation
 export const DashboardPage: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [teamStatus, setTeamStatus] = useState("");
+  const [teamZone,setTeamZone]=useState("");
   const [team, setTeam] = useState("");
   const [showAddMember, setShowAddMember] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +33,7 @@ export const DashboardPage: React.FC = () => {
           if (response.data.success) {
             setTeamMembers(response.data.data); // Assuming response.data.data contains team members
             setTeamStatus(response.data.team_status);
+            setTeamZone(response.data.team_zone);
             setTeam(response.data.data[0].team_name);
           } else {
             toast.error("Failed to fetch team members");
@@ -45,6 +47,18 @@ export const DashboardPage: React.FC = () => {
 
     fetchTeamData();
   }, [teamName]); // Re-run when `teamName` changes
+  const isCaptainFilled = teamMembers.some(
+    (member) =>
+      member.position === "Captain" &&
+      member.first_name &&
+      member.last_name &&
+      member.mobile_no &&
+      member.email
+      // member.passportPhoto &&
+      // member.ageProof
+  );
+  console.log("isCaptainFilled", isCaptainFilled);
+  // console.log("captain data", teamMembers.find(member => member.position === "Captain"))
 
   // ✅ Add a New Team Member (API Call)
   const handleAddMember = async (memberData: TeamMember) => {
@@ -58,9 +72,11 @@ export const DashboardPage: React.FC = () => {
         gender: memberData.gender, // matches backend column name
         dob: memberData.dob, // matches backend column name
         email: memberData.email, // matches backend column name
-        mobile: memberData.mobile, // matches backend column name (mobile_no in backend)
+        mobile_no: memberData.mobile, // matches backend column name (mobile_no in backend)
         t_shirt_size: memberData.tShirtSize, // matches backend column name
-        track_pant_size: memberData.trackpantSize // matches backend column name
+        track_pant_size: memberData.trackpantSize, // matches backend column name
+        passport_picture:memberData.passportPhoto,
+        age_proof:memberData.ageProof
       });
       console.log(response);
       if (response.data.success) {
@@ -73,12 +89,25 @@ export const DashboardPage: React.FC = () => {
       console.error("Error adding member:", error);
       toast.error("Error adding team member");
     }
+    // if (teamMembers.length >= 11) {
+    //   toast.error("Cannot add more than 10 members");
+    //   return;
+    // }
+
   };
 
   // ✅ Delete a Team Member
-  const handleDeleteMember = (id: string) => {
-    setTeamMembers(teamMembers.filter((member) => member.id !== id));
-    toast.success("Team member removed");
+  const handleDeleteMember = async (id) => {
+    try {
+      const response = await axios.delete(`http://localhost:8080/api/delete/${id}`); // Adjust the URL as needed to delete
+      if (response.status === 200) {
+        setTeamMembers(teamMembers.filter((member) => member.team_id !== id));
+        toast.success('Team member removed');
+      }
+    } catch (error) {
+      console.error('Error deleting team member:', error);
+      toast.error('Failed to remove team member');
+    }
   };
 
   // ✅ Promote/Demote Team Lead
@@ -92,24 +121,65 @@ export const DashboardPage: React.FC = () => {
   };
 
   // ✅ Edit Member Modal
+
   const handleEditMember = (id: string) => {
-    const memberToEdit = teamMembers.find((member) => member.id === id);
+    console.log("Edit id", id);
+    const memberToEdit = teamMembers.find((member) => member.team_id === id);
     if (memberToEdit) {
       setCurrentEditMember(memberToEdit);
       setIsEditModalOpen(true);
     }
   };
+  
+  
 
-  // ✅ Update a Member
-  const handleUpdateMember = (updatedMember: TeamMember) => {
-    setTeamMembers((prevMembers) =>
-      prevMembers.map((member) =>
-        member.id === updatedMember.id ? updatedMember : member
-      )
-    );
-    setIsEditModalOpen(false);
-    toast.success("Member details updated successfully");
+  const handleUpdateMember = async (updatedMember: TeamMember) => {
+    if (!currentEditMember) {
+      toast.error("No member selected for update");
+      return;
+    }
+  
+    const updatedMemberData = {
+      first_name: updatedMember.firstName,
+      middle_name: updatedMember.middleName,
+      last_name: updatedMember.lastName,
+      mobile_no: updatedMember.mobile,
+      position: updatedMember.position,
+      gender: updatedMember.gender,
+      dob: updatedMember.dob,
+      email: updatedMember.email,
+      t_shirt_size: updatedMember.tShirtSize,
+      track_pant_size: updatedMember.trackpantSize,
+      passport_picture: updatedMember.passportPhoto,
+      age_proof: updatedMember.ageProof,
+    };
+  
+    try {
+      const response = await axios.put(
+        `http://localhost:8080/api/editmember/${currentEditMember.team_id}`,
+        updatedMemberData
+      );
+    console.log("response of updated api",response);
+      if (response.data.success) {
+        setTeamMembers((prevMembers) =>
+          prevMembers.map((member) =>
+            member.team_id === currentEditMember.team_id
+              ? { ...member, ...updatedMemberData }
+              : member
+          )
+        );
+  
+        toast.success("Team member updated successfully");
+        setIsEditModalOpen(false);
+      } else {
+        toast.error("Failed to update team member");
+      }
+    } catch (error) {
+      console.error("Error updating team member:", error);
+      toast.error("An error occurred while updating team member");
+    }
   };
+  
 
   // ✅ Search Filter
   const filteredMembers = teamMembers.filter((member) =>
@@ -155,8 +225,8 @@ export const DashboardPage: React.FC = () => {
           />
           <TeamStatsCard
             icon={<Shield className="h-6 w-6 text-gray-400" />}
-            title="Registration Status"
-            value="Pending"
+            title="Team Zone"
+            value={teamZone}
           />
         </div>
 
@@ -172,13 +242,28 @@ export const DashboardPage: React.FC = () => {
                   Manage your cricket team roster and roles
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddMember(true)}
-                className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium w-full sm:w-auto"
-              >
-                <UserPlus className="h-5 w-5 mr-2" />
-                Add New Member
-              </button>
+              <div className="relative group inline-block">
+                <button
+                  onClick={() => {
+                    if (isCaptainFilled) {
+                      setShowAddMember(true);
+                    }
+                  }}
+                  disabled={!isCaptainFilled}
+                  className={`inline-flex items-center justify-center px-4 py-2 rounded-md shadow-sm text-sm font-medium w-full sm:w-auto 
+      ${isCaptainFilled ? "bg-blue-600 text-white" : "bg-gray-400 text-gray-700 cursor-not-allowed"}`}
+                >
+                  <UserPlus className="h-5 w-5 mr-2" />
+                  Add New Member
+                </button>
+
+                {!isCaptainFilled && (
+                  <span className="absolute -top-10 left-1 transform -translate-x-1/2 scale-0 group-hover:scale-100 transition-transform bg-black text-white p-2 rounded shadow-md text-xs whitespace-nowrap">
+                    Please fill all your information first using the edit button.
+                  </span>
+                )}
+              </div>
+
             </div>
           </div>
 
