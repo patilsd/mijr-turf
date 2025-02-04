@@ -39,4 +39,4 @@ module.exports = {
       max: 20
     }
   }
-};
+};   

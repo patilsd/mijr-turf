@@ -55,7 +55,7 @@ exports.up = function (knex) {
       table.increments('team_id').primary();
       table.string('team_name').notNullable();
       table.string('email');
-      table.integer('mobile_no');
+      table.string('mobile_no', 10);
       table.boolean('isLead');
       table.string('first_name').notNullable();
       table.string('middle_name');
@@ -85,7 +85,7 @@ exports.up = function (knex) {
       table.string('team_name').notNullable().unique();
       table.string('team_zone').notNullable();
       table.integer('team_id').unsigned().notNullable();
-      table.string('mobile_no', 15).notNullable().unique();
+      table.string('mobile_no', 10).notNullable().unique();
       table.string('otp', 6).notNullable();
       table.specificType('team_status', "ENUM('Pending', 'Approve', 'Reject')")
         .defaultTo('Pending')
@@ -138,7 +138,7 @@ exports.up = function (knex) {
     }).
     createTable('admin', (table) => {
       table.increments('admin_id').primary(); // Auto-incrementing primary key
-      table.string('mobile_no', 15).notNullable().unique(); // Admin's mobile number
+      table.string('mobile_no', 10).notNullable().unique(); // Admin's mobile number
       table.string('otp', 6).notNullable(); // OTP for authentication
       table.timestamp('created_at').defaultTo(knex.fn.now()); // Timestamp for creation
       table.timestamp('updated_at').defaultTo(knex.fn.now()); // Timestamp for last update

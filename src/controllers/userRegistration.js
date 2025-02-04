@@ -1,4 +1,116 @@
 const knex = require('../db/knex');
+const path = require('path');
+const jwt = require('jsonwebtoken');
+require("dotenv").config();
+
+
+// exports.registerUser = async (req, res) => {
+//     try {
+//         const { first_name, last_name, team_name, mobile_no, otp, team_zone } = req.body;
+
+//         // Validate required fields
+//         if (!first_name || !last_name || !team_name || !mobile_no) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'All fields are required',
+//             });
+//         }
+
+//         // Step 1: Check if the team already exists in `team_details`
+//         let team = await knex('team_details')
+//             .select('team_id')
+//             .where('team_name', team_name)
+//             .first();
+
+//         let team_id;
+//         if (!team) {
+//             // Team does not exist, create a new entry
+//             const [newTeamId] = await knex('team_details').insert({
+//                 team_name,
+//                 first_name,
+//                 last_name,
+//             });
+//             team_id = newTeamId; // Use the last inserted ID for team
+//         } else {
+//             team_id = team.team_id;
+//         }
+
+//         // Step 2: Check if the mobile number is already registered in `user_registration`
+//         const isMobileExists = await knex('user_registration')
+//             .select('mobile_no')
+//             .where('mobile_no', mobile_no)
+//             .first();
+
+//         if (isMobileExists) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'The mobile number is already registered. Please use a different number.',
+//             });
+//         }
+//         const isTeamNameExists = await knex('user_registration')
+//             .select('team_name')
+//             .where('team_name', team_name)
+//             .first();
+//         if (isTeamNameExists) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'The Team name is already registered. Please use a different team name.',
+//             });
+//         }
+//         // Step 3: Register the user in `user_registration` with the associated team_id
+//         const [user_id] = await knex('user_registration').insert({
+//             first_name,
+//             last_name,
+//             team_name, // Added team_name
+//             team_id,
+//             mobile_no,
+//             otp,
+//             team_zone
+//         });
+
+//         // Step 4: Assign the "player" role to the user in `user_role`
+//         const playerRole = await knex('role')
+//             .select('role_id')
+//             .where('name', 'player')
+//             .first();
+
+//         if (playerRole) {
+//             await knex('user_role').insert({
+//                 user_id, // Use the inserted user's ID
+//                 role_id: playerRole.role_id,
+//             });
+//         }
+
+//         // Success response
+//         return res.status(201).json({
+//             success: true,
+//             message: 'User registered successfully',
+//         });
+//     } catch (error) {
+//         // Handle duplicate entry errors
+//         if (error.code === 'ER_DUP_ENTRY') {
+//             if (error.message.includes('team_details_team_name_unique')) {
+//                 return res.status(400).json({
+//                     success: false,
+//                     message: 'The team name is already registered. Please choose a different name.',
+//                 });
+//             }
+//             if (error.message.includes('user_registration_mobile_no_unique')) {
+//                 return res.status(400).json({
+//                     success: false,
+//                     message: 'The mobile number is already registered. Please use a different number.',
+//                 });
+//             }
+//         }
+
+//         // General error fallback
+//         console.error(error); // Log for debugging purposes
+//         return res.status(500).json({
+//             success: false,
+//             message: 'An unexpected error occurred. Please try again later.',
+//         });
+//     }
+// };
 
 exports.registerUser = async (req, res) => {
     try {
@@ -43,16 +155,19 @@ exports.registerUser = async (req, res) => {
                 message: 'The mobile number is already registered. Please use a different number.',
             });
         }
+        
         const isTeamNameExists = await knex('user_registration')
             .select('team_name')
             .where('team_name', team_name)
             .first();
-            if (isTeamNameExists) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'The Team name is already registered. Please use a different team name.',
-                });
-            }
+
+        if (isTeamNameExists) {
+            return res.status(400).json({
+                success: false,
+                message: 'The Team name is already registered. Please use a different team name.',
+            });
+        }
+
         // Step 3: Register the user in `user_registration` with the associated team_id
         const [user_id] = await knex('user_registration').insert({
             first_name,
@@ -77,11 +192,20 @@ exports.registerUser = async (req, res) => {
             });
         }
 
-        // Success response
-       return res.status(201).json({
+        // Generate JWT token after successful registration
+        const token = jwt.sign(
+            { user_id, role: 'player' }, // Payload, typically contains user info and role
+            process.env.JWT_SECRET, // Secret key (use a strong secret key in production)
+            { expiresIn: '1h' } // Token expiration time
+        );
+
+        // Success response with the token
+        return res.status(201).json({
             success: true,
             message: 'User registered successfully',
+            token, // Send the JWT token in the response
         });
+
     } catch (error) {
         // Handle duplicate entry errors
         if (error.code === 'ER_DUP_ENTRY') {
@@ -107,6 +231,7 @@ exports.registerUser = async (req, res) => {
         });
     }
 };
+
 
 exports.getAllCaptain = async (req, res) => {
     try {
@@ -140,7 +265,7 @@ exports.getByTeam = async (req, res) => {
 
         // Fetch the team status from the `user_registration` table based on team_name
         const teamStatus = await knex('user_registration')
-            .select('team_status','team_zone')
+            .select('team_status', 'team_zone')
             .where({ team_name: teamName })
             .first();
 
@@ -154,22 +279,22 @@ exports.getByTeam = async (req, res) => {
         // Fetch the team members from the `team_details` table based on team_name
         const teamMembers = await knex('team_details')
             .select(
-                'team_id', 
-                'team_name', 
-                'email', 
-                'first_name', 
-                'middle_name', 
-                'last_name', 
+                'team_id',
+                'team_name',
+                'email',
+                'first_name',
+                'middle_name',
+                'last_name',
                 'mobile_no',
-                'position', 
-                'gender', 
-                'dob', 
-                't_shirt_size', 
-                'track_pant_size', 
-                'passport_picture', 
-                'age_proof', 
-                'uuid', 
-                'created_at', 
+                'position',
+                'gender',
+                'dob',
+                't_shirt_size',
+                'track_pant_size',
+                'passport_picture',
+                'age_proof',
+                'uuid',
+                'created_at',
                 'updated_at'
             )
             .where({ team_name: teamName });
@@ -185,7 +310,7 @@ exports.getByTeam = async (req, res) => {
         res.status(200).json({
             success: true,
             team_status: teamStatus.team_status,  // team status from user_registration table
-            team_zone:teamStatus.team_zone,
+            team_zone: teamStatus.team_zone,
             data: teamMembers
         });
 
@@ -257,231 +382,162 @@ exports.deleteUser = async (req, res) => {
     }
 };
 
-// exports.verifyOTP = async (req, res) => {
-//     try {
-//         const { mobile_no, otp } = req.body;
 
-//         const user = await knex('user_registration')
-//             .where({ mobile_no, otp })
-//             .first();
-//         const isMobileExists = await knex('user_registration')
-//             .where({ mobile_no })
-//             .first();
-//         if (!isMobileExists) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: 'Mobile number is not registered'
-//             })
-//         }
+exports.getUniqueTeamNames = async (req, res) => {
+    try {
+        // Fetch all unique team names from the `team_details` table
+        const uniqueTeams = await knex('team_details')
+            .distinct('team_name')
+            .select('team_name');
 
-//         if (!user) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: 'Invalid OTP'
-//             });
-//         }
+        // Check if there are no teams
+        if (uniqueTeams.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No teams found.',
+            });
+        }
 
-//         // Update user status after OTP verification
-//         await knex('user_registration')
-//             .where('mobile_no', mobile_no)
-//             .update({
-//                 is_active: true,
-//                 updated_at: knex.fn.now()
-//             });
-
-//         res.json({
-//             success: true,
-//             message: 'OTP verified successfully'
-//         });
-//     } catch (error) {
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error verifying OTP',
-//             error: error.message
-//         });
-//     }
-// };
+        // Respond with the unique team names
+        res.status(200).json({
+            success: true,
+            data: uniqueTeams,
+        });
+    } catch (error) {
+        console.error('Error fetching unique team names:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred. Please try again later.',
+        });
+    }
+};
 
 exports.addTeamMember = async (req, res) => {
     try {
-      const { teamName } = req.params; // Get team name from params
-      console.log('Team Name:', teamName);
-      const {
-        first_name,
-        last_name,
-        middle_name,
-        mobile_no,
-        position,
-        gender,
-        dob,
-        email,
-        t_shirt_size,
-        track_pant_size,
-        passport_picture,
-        age_proof
-      } = req.body; // Get team member details from request body
-  
-      // Validate required fields
-      if (!teamName || !first_name || !last_name || !email) {
-        return res.status(400).json({
-          success: false,
-          message: 'Team name, first name, last name, and email are required.',
+        const { teamName } = req.params; // Get team name from params
+        console.log('Team Name:', teamName);
+
+        const {
+            first_name,
+            last_name,
+            middle_name,
+            mobile_no,
+            position,
+            gender,
+            dob,
+            email,
+            t_shirt_size,
+            track_pant_size
+        } = req.body; // Get team member details from request body
+
+        // Retrieve file paths for images from multer
+        const passport_picture = req.files?.passport_picture ? req.files.passport_picture[0].path : '/assets/sfa_profile.png';
+        const age_proof = req.files?.age_proof ? req.files.age_proof[0].path : '/assets/age.png';
+
+        // Validate required fields
+        if (!teamName || !first_name || !last_name || !email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Team name, first name, last name, and email are required.',
+            });
+        }
+
+        // Check if the team exists
+        const teamExists = await knex('team_details')
+            .select('team_name')
+            .where('team_name', teamName)
+            .first();
+
+        if (!teamExists) {
+            return res.status(404).json({
+                success: false,
+                message: 'Team not found.',
+            });
+        }
+
+        // Check for duplicate email in the same team
+        const emailExists = await knex('team_details')
+            .select('email')
+            .where({ team_name: teamName, email })
+            .first();
+
+        if (emailExists) {
+            return res.status(400).json({
+                success: false,
+                message: 'A member with this email already exists in the team.',
+            });
+        }
+
+        
+
+        // Check if a captain already exists for the team
+        const existingCaptain = await knex('team_details')
+            .where({ team_name: teamName, position: 'captain' })
+            .first();
+
+        if (position === 'captain') {
+            if (existingCaptain) {
+                // If a captain exists, change the previous captain to "member"
+                await knex('team_details')
+                    .where({ team_name: teamName, position: 'captain' })
+                    .update({ position: 'member' });
+            }
+        } else {
+            // If the user is trying to set someone as a member while no captain exists, throw an error
+            const captainCount = await knex('team_details')
+                .where({ team_name: teamName, position: 'captain' })
+                .count('team_id as count')
+                .first();
+
+            if (captainCount.count === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'There must be at least one captain in the team.',
+                });
+            }
+        }
+
+        // Insert new team member
+        await knex('team_details').insert({
+            team_name: teamName,
+            first_name,
+            last_name,
+            middle_name,
+            mobile_no,
+            gender,
+            dob,
+            email,
+            position,
+            t_shirt_size,
+            track_pant_size,
+            passport_picture,
+            age_proof
         });
-      }
-  
-      // Check if the team exists
-      const teamExists = await knex('team_details')
-        .select('team_name')
-        .where('team_name', teamName)
-        .first();
-  
-      if (!teamExists) {
-        return res.status(404).json({
-          success: false,
-          message: 'Team not found.',
+
+        // Fetch the newly added member
+        const newMember = await knex('team_details')
+            .select('*')
+            .where({ team_name: teamName, email })
+            .first();
+
+        res.status(201).json({
+            success: true,
+            message: 'Team member added successfully.',
+            newMember: newMember, // Include the new member data in the response
         });
-      }
-  
-      // Check for duplicate email in the same team
-      const emailExists = await knex('team_details')
-        .select('email')
-        .where({ team_name: teamName, email })
-        .first();
-  
-      if (emailExists) {
-        return res.status(400).json({
-          success: false,
-          message: 'A member with this email already exists in the team.',
-        });
-      }
-  
-      // Insert new team member
-      await knex('team_details').insert({
-        team_name: teamName,
-        first_name,
-        last_name,
-        middle_name,
-        mobile_no,
-        gender,
-        dob,
-        email,
-        position,
-        t_shirt_size,
-        track_pant_size,
-        passport_picture: passport_picture && passport_picture !== '{}' ? passport_picture : '/assets/sfa_profile.png', 
-        age_proof: age_proof && age_proof !== '{}' ? age_proof : '/assets/age.png',
-      });
-  
-      // Fetch the newly added member
-      const newMember = await knex('team_details')
-        .select('*')
-        .where({ team_name: teamName, email })
-        .first();
-  
-      res.status(201).json({
-        success: true,
-        message: 'Team member added successfully.',
-        newMember: newMember, // Include the new member data in the response
-      });
     } catch (error) {
-      console.error('Error adding team member:', error);
-      res.status(500).json({
-        success: false,
-        message: 'An unexpected error occurred. Please try again later.',
-      });
-    }
-  };
-  
-  exports.getUniqueTeamNames = async (req, res) => {
-    try {
-      // Fetch all unique team names from the `team_details` table
-      const uniqueTeams = await knex('team_details')
-        .distinct('team_name')
-        .select('team_name');
-  
-      // Check if there are no teams
-      if (uniqueTeams.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'No teams found.',
+        console.error('Error adding team member:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred. Please try again later.',
         });
-      }
-  
-      // Respond with the unique team names
-      res.status(200).json({
-        success: true,
-        data: uniqueTeams,
-      });
-    } catch (error) {
-      console.error('Error fetching unique team names:', error);
-      res.status(500).json({
-        success: false,
-        message: 'An unexpected error occurred. Please try again later.',
-      });
     }
-  };
-  
-//   exports.updateTeamStatus = async (req, res) => {
-//     try {
-//         const { team_id, team_status } = req.body;
+};
 
-//         // Validate input
-//         if (!team_id || !team_status) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: 'team id and team_status are required.',
-//             });
-//         }
-
-//         // Validate team_status
-//         const validStatuses = ['pending', 'approve', 'reject'];
-//         if (!validStatuses.includes(team_status)) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: `Invalid team_status. Allowed values are: ${validStatuses.join(', ')}.`,
-//             });
-//         }
-
-//         // Check if the user exists
-//         const user = await knex('user_registration')
-//             .select('user_id', 'team_status')
-//             .where('team_id', team_id)
-//             .first();
-
-//         if (!user) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: 'User not found.',
-//             });
-//         }
-
-//         // Update the team_status
-//         await knex('user_registration')
-//             .where('team_id', team_id)
-//             .update({ team_status });
-
-//         // Return success response
-//         res.status(200).json({
-//             success: true,
-//             message: 'Team status updated successfully.',
-//             data: {
-//                 team_id,
-//                 previous_status: user.team_status,
-//                 new_status: team_status,
-//             },
-//         });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({
-//             success: false,
-//             message: 'An unexpected error occurred. Please try again later.',
-//         });
-//     }
-// };
 exports.updateTeamStatus = async (req, res) => {
     try {
         const { team_ids, team_status } = req.body;
- 
+
         // Validate input
         if (!team_ids || !team_status) {
             return res.status(400).json({
@@ -489,7 +545,7 @@ exports.updateTeamStatus = async (req, res) => {
                 message: 'team_ids and team_status are required.',
             });
         }
- 
+
         // Validate team_status
         const validStatuses = ['Pending', 'Approve', 'Reject'];
         if (!validStatuses.includes(team_status)) {
@@ -498,24 +554,24 @@ exports.updateTeamStatus = async (req, res) => {
                 message: `Invalid team_status. Allowed values are: ${validStatuses.join(', ')}.`,
             });
         }
- 
+
         // Check if all team_ids exist
         const users = await knex('user_registration')
             .select('team_id', 'team_status')
             .whereIn('team_id', team_ids);
- 
+
         if (users.length !== team_ids.length) {
             return res.status(404).json({
                 success: false,
                 message: 'Some team IDs not found.',
             });
         }
- 
+
         // Update the team_status for each team
         await knex('user_registration')
             .whereIn('team_id', team_ids)
             .update({ team_status });
- 
+
         // Return success response
         res.status(200).json({
             success: true,
@@ -533,74 +589,138 @@ exports.updateTeamStatus = async (req, res) => {
         });
     }
 };
+// exports.verifyOTP = async (req, res) => {
+//     try {
+//         const { mobile_no, otp } = req.body;
+
+//         // Check if the mobile number exists in the admin table first
+//         const admin = await knex('admin')
+//             .where({ mobile_no })
+//             .first();
+
+//         if (admin) {
+//             // If the mobile number exists in the admin table, verify OTP for admin
+//             if (admin.otp !== otp) {
+//                 return res.status(400).json({
+//                     success: false,
+//                     message: 'Invalid OTP for admin'
+//                 });
+//             }
+
+//             return res.status(202).json({
+//                 success: true,
+//                 message: 'OTP verified successfully for admin'
+//             });
+//         }
+
+//         // If the mobile number doesn't exist in the admin table, check in user_registration
+//         const isMobileExists = await knex('user_registration')
+//             .where({ mobile_no })
+//             .first();
+
+//         if (!isMobileExists) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Mobile number is not registered'
+//             });
+//         }
+
+//         // Verify OTP for user
+//         const user = await knex('user_registration')
+//             .where({ mobile_no, otp })
+//             .first();
+
+//         if (!user) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Invalid OTP for user'
+//             });
+//         }
+
+//         // Update user status after OTP verification
+//         await knex('user_registration')
+//             .where('mobile_no', mobile_no)
+//             .update({
+//                 is_active: true,
+//                 updated_at: knex.fn.now()
+//             });
+
+//         // Send response with the team_name
+//         res.json({
+//             success: true,
+//             team_name: user.team_name,
+//             message: 'OTP verified successfully for user'
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             success: false,
+//             message: 'Error verifying OTP',
+//             error: error.message
+//         });
+//     }
+// };
+
+
 exports.verifyOTP = async (req, res) => {
     try {
         const { mobile_no, otp } = req.body;
 
-        // Check if the mobile number exists in the admin table first
-        const admin = await knex('admin')
-            .where({ mobile_no })
-            .first();
-
-        if (admin) {
-            // If the mobile number exists in the admin table, verify OTP for admin
-            if (admin.otp !== otp) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid OTP for admin'
-                });
-            }
-
-            return res.status(202).json({
-                success: true,
-                message: 'OTP verified successfully for admin'
-            });
+        // Validate request input
+        if (!mobile_no || !otp) {
+            return res.status(400).json({ success: false, message: "Mobile number and OTP are required" });
         }
 
-        // If the mobile number doesn't exist in the admin table, check in user_registration
-        const isMobileExists = await knex('user_registration')
-            .where({ mobile_no })
-            .first();
+        // Check if user is an admin
+        const admin = await knex("admin").where({ mobile_no }).first();
+        if (admin) {
+            if (admin.otp !== otp) {
+                return res.status(400).json({ success: false, message: "Invalid OTP for admin" });
+            }
 
-        if (!isMobileExists) {
-            return res.status(400).json({
-                success: false,
-                message: 'Mobile number is not registered'
-            });
+            // Generate JWT token for admin
+            const token = jwt.sign(
+                { userId: admin.id, mobile_no, role: "admin" },
+                process.env.JWT_SECRET,
+                { expiresIn: "2h" }
+            );
+
+            return res.status(202).json({ success: true, message: "OTP verified successfully for admin", token });
+        }
+
+        // Check if user exists
+        const user = await knex("user_registration").where({ mobile_no }).first();
+        if (!user) {
+            return res.status(400).json({ success: false, message: "Mobile number is not registered" });
         }
 
         // Verify OTP for user
-        const user = await knex('user_registration')
-            .where({ mobile_no, otp })
-            .first();
-
-        if (!user) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid OTP for user'
-            });
+        if (user.otp !== otp) {
+            return res.status(400).json({ success: false, message: "Invalid OTP for user" });
         }
 
         // Update user status after OTP verification
-        await knex('user_registration')
-            .where('mobile_no', mobile_no)
-            .update({
-                is_active: true,
-                updated_at: knex.fn.now()
-            });
+        await knex("user_registration").where({ mobile_no }).update({
+            is_active: true,
+            updated_at: knex.fn.now(),
+        });
 
-        // Send response with the team_name
-        res.json({
+        // Generate JWT token for user
+        const token = jwt.sign(
+            { userId: user.user_id, mobile_no, role: "user", team_name: user.team_name },
+            process.env.JWT_SECRET,
+            { expiresIn: "2h" }
+        );
+
+        return res.json({
             success: true,
+            message: "OTP verified successfully for user",
             team_name: user.team_name,
-            message: 'OTP verified successfully for user'
+            token,
         });
+
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error verifying OTP',
-            error: error.message
-        });
+        console.error("OTP Verification Error:", error);
+        return res.status(500).json({ success: false, message: "Error verifying OTP", error: error.message });
     }
 };
 
@@ -614,28 +734,28 @@ exports.getAllTeams = async (req, res) => {
                 'user_registration.team_name',
                 'user_registration.team_status'
             );
- 
+
         if (!teams.length) {
             return res.status(404).json({
                 success: false,
                 message: 'No teams found.',
             });
         }
- 
+
         // Get unique team names to find members
         const uniqueTeamNames = [...new Set(teams.map(team => team.team_name))];
- 
+
         // Fetch members based on team_name from team_details
         const members = await knex('team_details')
             .whereIn('team_name', uniqueTeamNames)
             .select('team_name', 'first_name', 'last_name', 'position');
- 
+
         // Organizing data into required format with unique teams
         const teamMap = new Map();
- 
+
         teams.forEach(team => {
             const normalizedName = team.normalized_team_name;
- 
+
             if (!teamMap.has(normalizedName)) {
                 teamMap.set(normalizedName, {
                     team_id: team.team_id,
@@ -645,20 +765,20 @@ exports.getAllTeams = async (req, res) => {
                     members: []
                 });
             }
- 
+
             // Add matching members to the team
             const currentTeam = teamMap.get(normalizedName);
             const teamMembers = members.filter(member => member.team_name === team.team_name);
             currentTeam.members.push(...teamMembers);
             currentTeam.total_members = currentTeam.members.length;
         });
- 
+
         // Respond with structured team data
         res.status(200).json({
             success: true,
             teams: Array.from(teamMap.values()),
         });
- 
+
     } catch (error) {
         console.error('Error fetching teams:', error);
         res.status(500).json({
@@ -668,194 +788,85 @@ exports.getAllTeams = async (req, res) => {
         });
     }
 };
- 
+
 exports.editTeamMember = async (req, res) => {
     try {
-      const { team_id } = req.params; // Get team member ID (e.g., team_id or uuid) from params
-      const {
-        first_name,
-        last_name,
-        middle_name,
-        mobile_no,
-        position,
-        gender,
-        dob,
-        email,
-        t_shirt_size,
-        track_pant_size,
-        passport_picture,
-        age_proof
-      } = req.body; // Get updated team member details from the request body
-  
-      // Validate required fields (you can adjust this as needed)
-    //   if (!first_name || !last_name || !email) {
-    //     return res.status(400).json({
-    //       success: false,
-    //       message: 'First name, last name, and email are required.',
-    //     });
-    //   }
-  
-      // Check if the member exists in the team
-      const existingMember = await knex('team_details')
-        .select('*')
-        .where('team_id', team_id) // or use `uuid` if that's how you're identifying members
-        .first();
-  
-      if (!existingMember) {
-        return res.status(404).json({
-          success: false,
-          message: 'Team member not found.',
-        });
-      }
-      
-  
-    //   Optional: Check for duplicate email in the team (you can modify this if needed)
-    //   const emailExists = await knex('team_details')
-    //     .select('email')
-    //     .where({ team_name: existingMember.team_name, email })
-    //     .first();
-  
-    //   if (emailExists && emailExists.team_id !== team_id) {
-    //     return res.status(400).json({
-    //       success: false,
-    //       message: 'A member with this email already exists in the team.',
-    //     });
-    //   }
-  
-      // Update the team member information
-      await knex('team_details')
-        .where('team_id', team_id) // or use `uuid`
-        .update({
-          first_name,
-          middle_name,
-          last_name,
-          mobile_no,
-          position,
-          gender,
-          dob,
-          email,
-          t_shirt_size,
-          track_pant_size,
-          passport_picture: passport_picture && passport_picture !== '{}' ? passport_picture : '/assets/sfa_profile.png', 
-          age_proof: age_proof && age_proof !== '{}' ? age_proof : '/assets/age.png',
-          updated_at: knex.fn.now(), // Optional: update the timestamp
-        });
-  
-      // Fetch the updated member data
-      const updatedMember = await knex('team_details')
-        .select('*')
-        .where('team_id', team_id) // or use `uuid`
-        .first();
-  
-      res.status(200).json({
-        success: true,
-        message: 'Team member updated successfully.',
-        // updatedMember, // Include the updated member data in the response
-      });
-    } catch (error) {
-      console.error('Error updating team member:', error);
-      res.status(500).json({
-        success: false,
-        message: 'An unexpected error occurred. Please try again later.',
-      });
-    }
-  };
-  
+        const { team_id } = req.params; // Get team member ID
+        const {
+            first_name,
+            last_name,
+            middle_name,
+            mobile_no,
+            position,
+            gender,
+            dob,
+            email,
+            t_shirt_size,
+            track_pant_size
+        } = req.body;
 
-// exports.editTeamMember = async (req, res) => {
-//     try {
-//       const { team_id } = req.params; // Get team member ID from params
-//       const {
-//         first_name,
-//         last_name,
-//         middle_name,
-//         mobile_no,
-//         position,
-//         gender,
-//         dob,
-//         email,
-//         t_shirt_size,
-//         track_pant_size,
-//         passport_picture,
-//         age_proof
-//       } = req.body; // Get updated team member details
-  
-//       // Check if the member exists
-//       const existingMember = await knex('team_details')
-//         .select('*')
-//         .where('team_id', team_id)
-//         .first();
-  
-//       if (!existingMember) {
-//         return res.status(404).json({
-//           success: false,
-//           message: 'Team member not found.',
-//         });
-//       }
-  
-//       // Check if a captain already exists in this team
-//       const existingCaptain = await knex('team_details')
-//         .select('team_id') // Get the team member's ID who is the captain
-//         .where({ team_name: existingMember.team_name, position: 'Captain' })
-//         .first();
-  
-//       // If a captain exists and the new position is "Captain"
-//       if (existingCaptain && position === 'Captain') {
-//         if (existingCaptain.team_id !== team_id) {
-//           // Step 1: Demote the existing captain to "Member" automatically
-//           await knex('team_details')
-//             .where('team_id', existingCaptain.team_id)
-//             .update({ position: 'Member' });
-  
-//           console.log(`Demoted previous captain (ID: ${existingCaptain.team_id}) to Member.`);
-//         }
-//       }
-  
-//       // Ensure that at least one captain exists in the team
-//       if (!existingCaptain && position !== 'Captain') {
-//         return res.status(400).json({
-//           success: false,
-//           message: 'Each team must have at least one captain. Please assign a captain.',
-//         });
-//       }
-  
-//       // Update the team member information
-//       await knex('team_details')
-//         .where('team_id', team_id)
-//         .update({
-//           first_name,
-//           middle_name,
-//           last_name,
-//           mobile_no,
-//           position,
-//           gender,
-//           dob,
-//           email,
-//           t_shirt_size,
-//           track_pant_size,
-//           passport_picture: passport_picture && passport_picture !== '{}' ? passport_picture : '/assets/sfa_profile.png',
-//           age_proof: age_proof && age_proof !== '{}' ? age_proof : '/assets/age.png',
-//           updated_at: knex.fn.now(),
-//         });
-  
-//       // Fetch the updated member data
-//       const updatedMember = await knex('team_details')
-//         .select('*')
-//         .where('team_id', team_id)
-//         .first();
-  
-//       res.status(200).json({
-//         success: true,
-//         message: 'Team member updated successfully.',
-//         updatedMember, // Returning the updated member details
-//       });
-  
-//     } catch (error) {
-//       console.error('Error updating team member:', error);
-//       res.status(500).json({
-//         success: false,
-//         message: 'An unexpected error occurred. Please try again later.',
-//       });
-//     }
-//   };
-  
+        // Fetch the existing member details
+        const existingMember = await knex('team_details')
+            .select('*')
+            .where('team_id', team_id)
+            .first();
+
+        if (!existingMember) {
+            return res.status(404).json({
+                success: false,
+                message: 'Team member not found.',
+            });
+        }
+
+        // Handle file uploads: Keep existing images if none are uploaded
+        const passportPicture = req.files?.passport_picture
+            ? req.files.passport_picture[0].filename // Store only filename
+            : existingMember.passport_picture; // Keep old image
+
+        const ageProof = req.files?.age_proof
+            ? req.files.age_proof[0].filename
+            : existingMember.age_proof;
+
+        // Prepare the update object
+        const updatedMemberData = {
+            first_name,
+            middle_name: middle_name || existingMember.middle_name,
+            last_name,
+            mobile_no,
+            position,
+            gender,
+            dob,
+            email,
+            t_shirt_size,
+            track_pant_size,
+            passport_picture: passportPicture || '/assets/sfa_profile.png', // Default if null
+            age_proof: ageProof || '/assets/age.png', // Default if null
+            updated_at: knex.fn.now(),
+        };
+
+        // Update the team member information in the database
+        await knex('team_details')
+            .where('team_id', team_id)
+            .update(updatedMemberData);
+
+        // Fetch the updated member data
+        const updatedMember = await knex('team_details')
+            .select('*')
+            .where('team_id', team_id)
+            .first();
+
+        res.status(200).json({
+            success: true,
+            message: 'Team member updated successfully.',
+            updatedMember,
+        });
+
+    } catch (error) {
+        console.error('Error updating team member:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred. Please try again later.',
+        });
+    }
+};
+

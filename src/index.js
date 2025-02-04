@@ -3,10 +3,10 @@ const knex = require('./db/knex');
 const path = require('path');
 const cors = require('cors');
 const router = require('./routes/userRegistration');
-
+require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 // Middleware
 const corsOptions = {
   origin: 'http://localhost:5173',  // Replace with your frontend's URL
@@ -17,7 +17,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // for images
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/uploads', express.static( 'uploads'));
 
 // Routes
 app.use('/api', router);
