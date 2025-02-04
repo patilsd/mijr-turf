@@ -4,8 +4,11 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { UserCircle2, Shield, Filter } from 'lucide-react';
 import { Users, CheckCircle, XCircle, Clock } from 'lucide-react'; // Add these icons
 import axios from 'axios';
- 
+import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
+
 function AdminDashboard() {
+  // const navigate = useNavigate(); // Hook to navigate
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,37 +18,62 @@ function AdminDashboard() {
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [filteredTeams, setFilteredTeams] = useState(teams);
   const [selectedFilter, setSelectedFilter] = useState("All");
- 
+  const [showLogout, setShowLogout] = useState(false);
+  const navigate = useNavigate();
   const teamsPerPage = 10;
- 
- 
+
+
+
+  useEffect(() => {
+    const token = localStorage.getItem("token"); // Replace "authToken" with your actual token key
+    if (!token) {
+      // Redirect to login page if no token is found
+      navigate("/login");
+    }
+  }, [navigate]);
+
+
   // Update the filtered teams when a filter is selected
   const handleFilterChange = (status) => {
     setSelectedFilter(status);
     setShowFilterOptions(false);
- 
+
     // Apply the filter
     const newFilteredTeams =
       status === "All"
         ? teams
         : teams.filter((team) => team.team_status.toLowerCase() === status.toLowerCase());
- 
+
     setFilteredTeams(newFilteredTeams); // Update the filtered team list
   };
- 
+
+  // Toggle the display of logout option
+  const toggleLogout = () => {
+    setShowLogout(!showLogout);
+  };
+
+  // Handle the logout process
+  const handleLogout = () => {
+    // Remove the token from local storage
+    localStorage.removeItem('token');
+
+    // Navigate to the login page
+    navigate('/login');
+  };
+
   const indexOfLastTeam = currentPage * teamsPerPage;
   const indexOfFirstTeam = indexOfLastTeam - teamsPerPage;
   const currentTeams = teams.slice(indexOfFirstTeam, indexOfLastTeam);
   const totalPages = Math.ceil(teams.length / teamsPerPage);
- 
- 
+
+
   // Count totals for cards
   const totalTeams = teams.length;
   const totalApproved = teams.filter(team => team.team_status === "Approve").length;
   const totalRejected = teams.filter(team => team.team_status === "Reject").length;
   const totalPending = teams.filter(team => team.team_status === "Pending").length;
- 
- 
+
+
   useEffect(() => {
     setLoading(true);
     axios.get('http://localhost:8080/api/getAllTeams')
@@ -60,17 +88,17 @@ function AdminDashboard() {
         setLoading(false);
       });
   }, []);
- 
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>{error}</div>;
- 
- 
+
+
   const updateTeamStatus = async (teamIds, status) => {
     if (teamIds.length === 0) {
       alert("Please select at least one team.");
       return;
     }
- 
+
     try {
       const response = await axios.put("http://localhost:8080/api/teamStatus", {
         team_ids: teamIds,
@@ -96,16 +124,16 @@ function AdminDashboard() {
       alert("Failed to update team status. Please try again later.");
     }
   };
- 
- 
- 
+
+
+
   const handleTeamClick = (team) => {
     setSelectedTeam(team);
   };
- 
- 
- 
- 
+
+
+
+
   const handleTeamSelect = (teamId) => {
     setSelectedTeams((prevSelected) => {
       const newSelected = new Set(prevSelected);
@@ -117,8 +145,8 @@ function AdminDashboard() {
       return newSelected;
     });
   };
- 
- 
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 space-y-7">
       {/* Header */}
@@ -133,13 +161,20 @@ function AdminDashboard() {
               <span className="text-sm text-gray-500">Welcome </span>
               <div className="flex items-center space-x-2">
                 <UserCircle2 className="h-6 w-6 text-gray-400" />
-                <span className="font-medium text-gray-900">Admin</span>
+                <button className="font-medium text-gray-900" onClick={toggleLogout}>Admin</button>
+                {showLogout && (
+                  <button
+                    className="font-medium text-red-600"
+                    onClick={handleLogout}>
+                    Logout
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
- 
+
       {/* Stats Cards */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-0 mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-lg shadow-md flex items-center gap-4">
@@ -171,7 +206,7 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
- 
+
       {/* Pagination */}
       <div className="flex justify-center items-center gap-4 mt-6">
         <button
@@ -181,7 +216,7 @@ function AdminDashboard() {
         >
           <ChevronLeftIcon />
         </button>
- 
+
         {/* Page Numbers */}
         {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => {
           if (
@@ -210,7 +245,7 @@ function AdminDashboard() {
           }
           return null;
         })}
- 
+
         <button
           onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
           disabled={currentPage === totalPages}
@@ -219,9 +254,9 @@ function AdminDashboard() {
           <ChevronRightIcon />
         </button>
       </div>
- 
- 
- 
+
+
+
       {/* Teams List */}
       <div className="max-w-6xl mx-auto p-8 bg-white rounded-lg shadow-md overflow-hidden">
         <div className="flex items-center gap-6 mb-4">
@@ -239,7 +274,7 @@ function AdminDashboard() {
           >
             Reject
           </button>
- 
+
           {/* Filter Icon */}
           <div className="relative">
             <div className="relative">
@@ -249,9 +284,9 @@ function AdminDashboard() {
                 className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 flex items-center gap-2 transition duration-200"
               >
                 <Filter className="h-6 w-6 text-gray-600" />
- 
+
               </button>
- 
+
               {/* Filter Dropdown */}
               {showFilterOptions && (
                 <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg transition-opacity duration-200 opacity-100">
@@ -268,12 +303,12 @@ function AdminDashboard() {
                 </div>
               )}
             </div>
- 
+
           </div>
- 
+
         </div>
- 
- 
+
+
         <table className="w-full border-collapse">
           <thead className="bg-gray-100">
             <tr>
@@ -289,7 +324,7 @@ function AdminDashboard() {
                   }}
                   checked={teams.every((team) => selectedTeams.has(team.team_id))}
                 />
- 
+
               </th>
               <th className="p-4 border-b text-left">Team Name</th>
               <th className="p-4 border-b text-left">Status</th>
@@ -331,8 +366,8 @@ function AdminDashboard() {
           </tbody>
         </table>
       </div>
- 
- 
+
+
       {/* Team Details Modal */}
       {selectedTeam && (
         <div
@@ -390,7 +425,7 @@ function AdminDashboard() {
                     <td colSpan="3" className="p-4 text-center">No members found</td>
                   </tr>
                 )}
- 
+
               </tbody>
             </table>
             <button
@@ -402,11 +437,10 @@ function AdminDashboard() {
           </div>
         </div>
       )}
- 
+
     </div>
   );
 }
- 
+
 export default AdminDashboard;
- 
- 
+

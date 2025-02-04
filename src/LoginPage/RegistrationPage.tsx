@@ -79,7 +79,7 @@ function RegistrationPage() {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
     const formData = formType === 'login' ? loginFormData : signupFormData;
-// console.log(formData)
+    // console.log(formData)
     // Validation for required fields
     if (formType === 'signup') {
       // console.log("submit firstname", signupFormData.firstName)
@@ -113,6 +113,10 @@ function RegistrationPage() {
         });
 
         const data = await response.json();
+        console.log("JWT TOKEN response", response);
+        console.log("data", data);
+        localStorage.setItem('token', data.token);
+
 
         if (!response.ok) {
           // Check for specific error when mobile number is already registered
@@ -146,6 +150,7 @@ function RegistrationPage() {
         // console.log("new one",response)
 
         const data = await response.json();
+        localStorage.setItem('token', data.token);
         if (!response.ok) {
           throw new Error(data.message || 'Login failed');
         }

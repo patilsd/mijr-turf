@@ -1,31 +1,58 @@
 import { useState } from "react";
 import { Trash2, Edit } from "lucide-react";
 
-const FileModal: React.FC<{ file: File | null; onClose: () => void }> = ({ file, onClose }) => {
-    if (!file) return null;
+// const FileModal: React.FC<{ file: File | null; onClose: () => void }> = ({ file, onClose }) => {
+//     if (!file) return null;
 
-    const fileUrl = URL.createObjectURL(file);
+//     const fileUrl = URL.createObjectURL(file);
 
-    return (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-4 rounded-md relative">
-                <button
-                    onClick={onClose}
-                    className="absolute top-2 right-2 text-gray-500 text-lg"
-                >
-                    X
-                </button>
-                {file.type.startsWith("image/") ? (
-                    <img src={fileUrl} alt={file.name} className="max-w-full max-h-[80vh]" />
-                ) : file.type === "application/pdf" ? (
-                    <embed src={fileUrl} type="application/pdf" className="w-full h-[80vh]" />
-                ) : (
-                    <div>File type not supported</div>
-                )}
-            </div>
-        </div>
-    );
+//     return (
+//         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+//             <div className="bg-white p-4 rounded-md relative">
+//                 <button
+//                     onClick={onClose}
+//                     className="absolute top-2 right-2 text-gray-500 text-lg"
+//                 >
+//                     X
+//                 </button>
+//                 {file.type.startsWith("image/") ? (
+//                     <img src={fileUrl} alt={file.name} className="max-w-full max-h-[80vh]" />
+//                 ) : file.type === "application/pdf" ? (
+//                     <embed src={fileUrl} type="application/pdf" className="w-full h-[80vh]" />
+//                 ) : (
+//                     <div>File type not supported</div>
+//                 )}
+//             </div>
+//         </div>
+//    );
+// };
+
+const FileModal: React.FC<{ file: File | string | null; onClose: () => void }> = ({ file, onClose }) => {
+  if (!file) return null;
+
+  // If the file is a URL (string), use it directly.
+  const fileUrl = typeof file === "string" ? file : URL.createObjectURL(file);
+
+  return (
+    <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+      <div className="bg-white p-4 rounded-md relative">
+        <button onClick={onClose} className="absolute top-2 right-2 text-gray-500 text-lg">
+          X
+        </button>
+        {typeof file === "string" ? (
+          <img src={fileUrl} alt="File preview" className="max-w-full max-h-[80vh]" />
+        ) : file instanceof File && file.type.startsWith("image/") ? (
+          <img src={fileUrl} alt={file.name} className="max-w-full max-h-[80vh]" />
+        ) : file instanceof File && file.type === "application/pdf" ? (
+          <embed src={fileUrl} type="application/pdf" className="w-full h-[80vh]" />
+        ) : (
+          <div>File type not supported</div>
+        )}
+      </div>
+    </div>
+  );
 };
+
 
 interface TeamTableProps {
     members: TeamMember[];
@@ -68,7 +95,10 @@ export const TeamMemberTable: React.FC<TeamTableProps> = ({ members, onPromote, 
             <td className="text-sm text-gray-900 px-6 min-w-[180px] truncate">{member.first_name} {member.middle_name} {member.last_name}</td>
             <td className="text-sm text-gray-900 px-6 min-w-[150px]">{member.position}</td>
             <td className="text-sm text-gray-900 px-6 min-w-[120px]">{member.gender}</td>
-            <td className="text-sm text-gray-900 px-6 min-w-[160px]">{member.dob}</td>
+            <td className="text-sm text-gray-900 px-6 min-w-[160px]">
+  {member.dob ? new Date(member.dob).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
+</td>
+
             <td className="text-sm text-gray-900 px-6 min-w-[160px]">{member.mobile_no}</td>
             <td className="text-sm text-gray-900 px-6 min-w-[250px] truncate">{member.email}</td>
             <td className="text-sm text-gray-900 px-6 min-w-[120px]">{member.t_shirt_size}</td>
@@ -79,10 +109,10 @@ export const TeamMemberTable: React.FC<TeamTableProps> = ({ members, onPromote, 
             <td className="text-sm text-blue-600 cursor-pointer px-6 min-w-[180px]" onClick={() => setModalFile(member.age_proof)}>
               {member.age_proof ? member.age_proof : "No file"}
             </td>
-            <td className="py-4 px-6 text-left text-sm flex space-x-2 min-w-[180px]">
-              <button onClick={() => onPromote(member.id)} className="text-indigo-600 hover:text-indigo-900">
+            <td className="py-4 px-6 text-left text-sm flex space-x-4 min-w-[180px]">
+              {/* <button onClick={() => onPromote(member.id)} className="text-indigo-600 hover:text-indigo-900">
                 {member.isLead ? "Demote" : "Promote"}
-              </button>
+              </button> */}
               <button onClick={() => onEdit(member.team_id)} className="text-blue-600 hover:text-blue-900">
                 <Edit className="h-5 w-5" />
               </button>

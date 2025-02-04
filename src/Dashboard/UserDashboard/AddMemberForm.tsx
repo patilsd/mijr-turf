@@ -3,12 +3,14 @@ import React, { useState, useEffect } from "react";
 
 interface AddMemberFormProps {
   member?: TeamMember; // Optional prop for editing
+  teamId: string;
   onAddMember: (member: TeamMember) => void;
   onCancel: () => void;
 }
 
 export const AddMemberForm: React.FC<AddMemberFormProps> = ({
   member,
+  teamId,
   onAddMember,
   onCancel,
 }) => {
@@ -31,15 +33,30 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
   // Pre-fill form data when editing
   useEffect(() => {
     if (member) {
-      setFormData(member);
+      setFormData((prevData) => ({
+        ...prevData,
+        firstName: member.first_name || '',
+        middleName: member.middle_name || '',
+        lastName: member.last_name || '',
+        position: member.position || '',
+        gender: member.gender || '',
+        dob: member.dob ? member.dob.split('T')[0] : '',
+        email: member.email || '',
+        mobile: member.mobile_no || '',
+        tShirtSize: member.t_shirt_size || '',
+        trackpantSize: member.track_pant_size || '',
+        passportPhoto: member.passport_picture || '',
+        ageProof: member.age_proof || '',
+      }));
     }
   }, [member]);
+
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData((prevData) => ({ ...prevData, [name]: name === "dob" ? value.split('T')[0] : value,}));
   };
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
@@ -63,11 +80,55 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAddMember(formData); // Pass updated data to parent component
+
+    const formDataToSubmit = new FormData();
+    formDataToSubmit.append("first_name", formData.firstName);
+    formDataToSubmit.append("middle_name", formData.middleName);
+    formDataToSubmit.append("last_name", formData.lastName);
+    formDataToSubmit.append("position", formData.position);
+    formDataToSubmit.append("gender", formData.gender);
+    formDataToSubmit.append("dob", new Date(formData.dob).toISOString());
+    formDataToSubmit.append("email", formData.email);
+    formDataToSubmit.append("mobile_no", formData.mobile);
+    formDataToSubmit.append("t_shirt_size", formData.tShirtSize);
+    formDataToSubmit.append("track_pant_size", formData.trackpantSize);
+
+    if (formData.passportPhoto) {
+      formDataToSubmit.append("passport_picture", formData.passportPhoto);
+    }
+    if (formData.ageProof) {
+      formDataToSubmit.append("age_proof", formData.ageProof);
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/uploadImages/${teamId}`, {
+        method: "POST",
+        body: formDataToSubmit,
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        console.log("Images uploaded successfully", result);
+        setFormData((prevData) => ({
+          ...prevData,
+          passportPhoto: result.passportPictureUrl,
+          ageProof: result.ageProofUrl,
+        }));
+
+      } else {
+        console.error("Error uploading images:", result);
+      }
+    } catch (error) {
+      console.error("Error uploading images:", error);
+    }
+
+    onAddMember(formData);
     onCancel();
   };
+
+
 
   return (
     <form
@@ -121,6 +182,7 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
             Position
           </label>
           <select
+            id="position"
             name="position"
             value={formData.position}
             onChange={handleChange}
@@ -160,7 +222,7 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
           <input
             type="date"
             name="dob"
-            value={formData.dob}
+            value={formData.dob ? formData.dob.split("T")[0] : ""}
             onChange={handleChange}
             required
             className="mt-1 p-2 block w-full text-sm border border-gray-300 rounded-md shadow-sm"
@@ -175,8 +237,8 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
             name="mobile"
             value={formData.mobile}
             onChange={handleChange}
-            maxLength={9}
-            pattern="[0-9]{}" // Ensure only 10-digit numbers
+            maxLength={10}
+            pattern="[0-9]{10}" // Ensure only 10-digit numbers
             required
             placeholder="1234567890"
             className="mt-1 p-2 block w-full text-sm border border-gray-300 rounded-md shadow-sm"
@@ -241,42 +303,42 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
           </select>
         </div>
         <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Passport Size Picture (JPEG, PNG, PDF, max 5MB)
-        </label>
-        <input
-          type="file"
-          name="passportPhoto"
-          accept="image/jpeg, image/png, application/pdf"
-          onChange={handleFileChange}
-          className="mt-6 p-2 block w-full text-sm border border-gray-300 rounded-md shadow-sm"
-        />
-        {formData.passportPhoto && (
-          <p className="text-xs text-gray-500 mt-1">
-            Selected: {formData.passportPhoto.name}
-          </p>
-        )}
+          <label className="block text-sm font-medium text-gray-700">
+            Passport Size Picture (JPEG, PNG, PDF, max 5MB)
+          </label>
+          <input
+            type="file"
+            name="passportPhoto"
+            accept="image/jpeg, image/png, application/pdf"
+            onChange={handleFileChange}
+            className="mt-6 p-2 block w-full text-sm border border-gray-300 rounded-md shadow-sm"
+          />
+          {formData.passportPhoto && (
+            <p className="text-xs text-gray-500 mt-1">
+              Selected: {formData.passportPhoto instanceof File ? formData.passportPhoto.name : formData.passportPhoto}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Age Identification Proof (Aadhar Card, Birth Certificate) (JPEG, PNG, PDF, max 5MB)
+          </label>
+          <input
+            type="file"
+            name="ageProof"
+            accept="image/jpeg, image/png, application/pdf"
+            onChange={handleFileChange}
+            className="mt-1 p-2 block w-full text-sm border border-gray-300 rounded-md shadow-sm"
+          />
+          {formData.ageProof && (
+            <p className="text-xs text-gray-500 mt-1">
+              Selected: {formData.ageProof instanceof File ? formData.ageProof.name : formData.ageProof}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Age Identification Proof (Aadhar Card, Birth Certificate) (JPEG, PNG, PDF, max 5MB)
-        </label>
-        <input
-          type="file"
-          name="ageProof"
-          accept="image/jpeg, image/png, application/pdf"
-          onChange={handleFileChange}
-          className="mt-1 p-2 block w-full text-sm border border-gray-300 rounded-md shadow-sm"
-        />
-        {formData.ageProof && (
-          <p className="text-xs text-gray-500 mt-1">
-            Selected: {formData.ageProof.name}
-          </p>
-        )}
-      </div>
-      </div>
-      
       <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-4 mt-4">
         <button
           type="button"
@@ -295,3 +357,4 @@ export const AddMemberForm: React.FC<AddMemberFormProps> = ({
     </form>
   );
 };
+

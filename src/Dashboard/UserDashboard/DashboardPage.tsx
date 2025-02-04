@@ -8,9 +8,10 @@ import { UserPlus, Shield, Trophy, Users, UserCircle2 } from "lucide-react";
 import { TeamMember } from "./../../types";
 import toast from "react-hot-toast";
 import axios from "axios";  // Import axios for API calls
-import { useLocation } from 'react-router-dom'; // Import useLocation
+import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate(); // Hook to navigate
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [teamStatus, setTeamStatus] = useState("");
   const [teamZone, setTeamZone] = useState("");
@@ -19,10 +20,19 @@ export const DashboardPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentEditMember, setCurrentEditMember] = useState<TeamMember | null>(null);
-
+  const [showLogout, setShowLogout] = useState(false);
+  
   const location = useLocation(); // Get current URL location
   const teamName = new URLSearchParams(location.search).get("teamName"); // Extract teamName from query parameters
   console.log("URL TEAM", teamName);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token"); // Replace "authToken" with your actual token key
+    if (!token) {
+      // Redirect to login page if no token is found
+      navigate("/login");
+    }
+  }, [navigate]);
   // ✅ Fetch Team Members by Team Name
   useEffect(() => {
     const fetchTeamData = async () => {
@@ -47,38 +57,56 @@ export const DashboardPage: React.FC = () => {
 
     fetchTeamData();
   }, [teamName]); // Re-run when `teamName` changes
+
+  console.log("Team members", teamMembers);
   const isCaptainFilled = teamMembers.some(
     (member) =>
       member.position === "Captain" &&
       member.first_name &&
       member.last_name &&
       member.mobile_no &&
-      member.email
-    // member.passportPhoto &&
-    // member.ageProof
+      member.email &&
+      member.passport_picture &&
+      member.age_proof
   );
   console.log("isCaptainFilled", isCaptainFilled);
-  // console.log("captain data", teamMembers.find(member => member.position === "Captain"))
+ 
 
-  // ✅ Add a New Team Member (API Call)
   const handleAddMember = async (memberData: TeamMember) => {
     console.log("memberdata", memberData);
+
+    // Create FormData to send files and other form data
+    const formData = new FormData();
+    formData.append('team_id', memberData.team_id);
+
+    formData.append('first_name', memberData.firstName);
+    formData.append('middle_name', memberData.middleName);
+    formData.append('last_name', memberData.lastName);
+    formData.append('position', memberData.position);
+    formData.append('gender', memberData.gender);
+    formData.append('dob', memberData.dob);
+    formData.append('email', memberData.email);
+    formData.append('mobile_no', memberData.mobile);
+    formData.append('t_shirt_size', memberData.tShirtSize);
+    formData.append('track_pant_size', memberData.trackpantSize);
+
+    // Append the files
+    if (memberData.passportPhoto) {
+      formData.append('passport_picture', memberData.passportPhoto);
+    }
+    if (memberData.ageProof) {
+      formData.append('age_proof', memberData.ageProof);
+    }
+
     try {
-      const response = await axios.post(`http://localhost:8080/api/addmember/${teamName}`, {
-        first_name: memberData.firstName,  // matches backend column name
-        middle_name: memberData.middleName, // matches backend column name
-        last_name: memberData.lastName, // matches backend column name
-        position: memberData.position, // matches backend column name
-        gender: memberData.gender, // matches backend column name
-        dob: memberData.dob, // matches backend column name
-        email: memberData.email, // matches backend column name
-        mobile_no: memberData.mobile, // matches backend column name (mobile_no in backend)
-        t_shirt_size: memberData.tShirtSize, // matches backend column name
-        track_pant_size: memberData.trackpantSize, // matches backend column name
-        passport_picture: memberData.passportPhoto,
-        age_proof: memberData.ageProof
+      const response = await axios.post(`http://localhost:8080/api/addmember/${teamName}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',  // Ensure the correct content type for file uploads
+        },
       });
+
       console.log(response);
+
       if (response.data.success) {
         setTeamMembers([...teamMembers, response.data.newMember]); // Append new member from API response
         toast.success("Team member added successfully");
@@ -89,11 +117,6 @@ export const DashboardPage: React.FC = () => {
       console.error("Error adding member:", error);
       toast.error("Error adding team member");
     }
-    // if (teamMembers.length >= 11) {
-    //   toast.error("Cannot add more than 10 members");
-    //   return;
-    // }
-
   };
 
   // ✅ Delete a Team Member
@@ -120,62 +143,92 @@ export const DashboardPage: React.FC = () => {
     toast.success("Team lead status updated");
   };
 
-  // ✅ Edit Member Modal
 
-  // const handleEditMember = (id: string) => {
-  //   console.log("Edit id", id);
-  //   const memberToEdit = teamMembers.find((member) => member.team_id === id);
-  //   if (memberToEdit) {
-  //     setCurrentEditMember(memberToEdit);
-  //     setIsEditModalOpen(true);
-  //   }
-  // };
-  const handleEditMember = (id: string) => {
-    console.log("Edit id", id);
+  const handleEditMember = (id: number) => {
+    console.log("Edit id", typeof (id));
     const memberToEdit = teamMembers.find((member) => member.team_id === id);
     if (memberToEdit) {
+      console.log("Member to edit:", memberToEdit); 
       setCurrentEditMember(memberToEdit);  // Set member to edit
       setIsEditModalOpen(true);  // Open the modal for editing
     }
   };
 
 
+
   const handleUpdateMember = async (updatedMember: TeamMember) => {
-    if (!currentEditMember) {
-      toast.error("No member selected for update");
+    console.log("Selected Member", updatedMember);
+    if (!currentEditMember || !currentEditMember.team_id) {
+      toast.error("Invalid member data");
       return;
     }
+ 
+        console.log("currentEditMember before API call:", currentEditMember);
+     // This will log the updated value of currentEditMember
+    
 
-    const updatedMemberData = {
-      first_name: updatedMember.firstName,
-      middle_name: updatedMember.middleName,
-      last_name: updatedMember.lastName,
-      mobile_no: updatedMember.mobile,
-      position: updatedMember.position,
-      gender: updatedMember.gender,
-      dob: updatedMember.dob,
-      email: updatedMember.email,
-      t_shirt_size: updatedMember.tShirtSize,
-      track_pant_size: updatedMember.trackpantSize,
-      passport_picture: updatedMember.passportPhoto,
-      age_proof: updatedMember.ageProof,
-    };
+    if (!currentEditMember.team_id) {
+      toast.error("Team ID is missing for the selected member");
+      return;
+    }
+    console.log("update team id", typeof (currentEditMember.team_id));
+    const formDataToSubmit = new FormData();
+    formDataToSubmit.append('team_id', updatedMember.team_id);
+
+    formDataToSubmit.append("first_name", updatedMember.firstName);
+    formDataToSubmit.append("middle_name", updatedMember.middleName);
+    formDataToSubmit.append("last_name", updatedMember.lastName);
+    formDataToSubmit.append("mobile_no", updatedMember.mobile);
+    formDataToSubmit.append("position", updatedMember.position);
+    formDataToSubmit.append("gender", updatedMember.gender);
+    formDataToSubmit.append("dob", updatedMember.dob);
+    formDataToSubmit.append("email", updatedMember.email);
+    formDataToSubmit.append("t_shirt_size", updatedMember.tShirtSize);
+    formDataToSubmit.append("track_pant_size", updatedMember.trackpantSize);
+
+    // Log form data for debugging
+    console.log("Form data to submit:", formDataToSubmit);
+
+    // Check and append images
+    if (updatedMember.passportPhoto instanceof File) {
+      formDataToSubmit.append("passport_picture", updatedMember.passportPhoto);
+    } else {
+      formDataToSubmit.append("passport_picture", updatedMember.passportPhoto || "/assets/sfa_profile.png");
+    }
+
+    if (updatedMember.ageProof instanceof File) {
+      formDataToSubmit.append("age_proof", updatedMember.ageProof);
+    } else {
+      formDataToSubmit.append("age_proof", updatedMember.ageProof || "/assets/age.png");
+    }
+
+    // Log the form data key-value pairs
+    for (let [key, value] of formDataToSubmit.entries()) {
+      console.log("key value", key, value);
+    }
 
     try {
       const response = await axios.put(
         `http://localhost:8080/api/editmember/${currentEditMember.team_id}`,
-        updatedMemberData
+        formDataToSubmit,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data", // Important for file uploads
+          },
+        }
       );
-      console.log("response of updated api", response);
+      console.log("Response from api", response);
+
       if (response.data.success) {
+        // Update the local state
         setTeamMembers((prevMembers) =>
           prevMembers.map((member) =>
             member.team_id === currentEditMember.team_id
-              ? { ...member, ...updatedMemberData }
+              ? { ...member, ...response.data.updatedMember }
               : member
           )
         );
-
+        console.log("Updated team members:", response.data.updatedMember);
         toast.success("Team member updated successfully");
         setIsEditModalOpen(false);
       } else {
@@ -188,10 +241,25 @@ export const DashboardPage: React.FC = () => {
   };
 
 
-  // ✅ Search Filter
+
   const filteredMembers = teamMembers.filter((member) =>
     `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+
+  // Toggle the display of logout option
+  const toggleLogout = () => {
+    setShowLogout(!showLogout);
+  };
+
+  // Handle the logout process
+  const handleLogout = () => {
+    // Remove the token from local storage
+    localStorage.removeItem('token');
+
+    // Navigate to the login page
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
@@ -209,7 +277,14 @@ export const DashboardPage: React.FC = () => {
               <span className="text-sm text-gray-500">Welcome</span>
               <div className="flex items-center space-x-2">
                 <UserCircle2 className="h-6 w-6 text-gray-400" />
-                <span className="font-medium text-gray-900">{team}</span>
+                <button className="font-medium text-gray-900"  onClick={toggleLogout}>{team}</button>
+                {showLogout && (
+                  <button
+                    className="font-medium text-red-600"
+                    onClick={handleLogout}>
+                    Logout
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -283,9 +358,9 @@ export const DashboardPage: React.FC = () => {
           )}
 
           {/* Search Bar */}
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <SearchBar value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-          </div>
+          </div> */}
 
           {/* Team Members Table */}
           <div className="mt-6 overflow-x-auto">
@@ -318,3 +393,4 @@ export const DashboardPage: React.FC = () => {
     </div>
   );
 };
+
